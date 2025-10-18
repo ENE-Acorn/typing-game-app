@@ -5,6 +5,7 @@ import { useState, useEffect } from 'react';
 import StartScreen from './components/Start';
 import GameScreen from './components/Game';
 import ResultScreen from './components/Result';
+import CountdownScreen from './components/Countdown';
 
 // プレイヤー1人分のデータの型を定義
 export interface Player {
@@ -87,6 +88,10 @@ const [gameState, setGameState] = useState<GameState | null>(null);
   // gameState.statusの値に応じて、表示するコンポーネントを切り替える
   if (gameState.status === 'waiting') {
     return <StartScreen gameState={gameState} onReady={handlePlayerReady} myId={myId} onNameChange={handleNameChange}/>;
+  }
+
+  if(gameState.status === 'countdown') {
+    return <CountdownScreen gameState={gameState}/>;
   }
 
   if (gameState.status === 'playing') {

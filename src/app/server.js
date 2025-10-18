@@ -10,7 +10,8 @@ const handle = app.getRequestHandler();
 // ★★★ STEP 1: ゲームの「台本」となるgameStateを用意 ★★★
 let gameState = {
     status: 'waiting',// ゲームの状態: 'waiting', 'playing', 'finished'
-    players: {}      // プレイヤー情報をここに格納していく
+    players: {},      // プレイヤー情報をここに格納していく
+    countdown: 3
 };
 
 // ★★★ STEP 2: 接続しているクライアント全員を管理するリスト ★★★
@@ -54,11 +55,27 @@ app.prepare().then(() => {
         // 条件: プレイヤーが2人いて、かつ全員のisReadyがtrue
         if (players.length === 2 && players.every(p => p.isReady)) {
             console.log("全員準備完了！ゲームを開始します。");
-            gameState.status = 'playing';
-            // 本来はここでお題を設定する
-            // gameState.currentWord = getNextWord(); 
+            gameState.status = 'countdown';
+            gameState.countdown = 3;
             broadcastGameState(); // 状態が変わったので全員に通知！
+            startCountdown();
         }
+    }
+
+    function startCountdown() {
+        let countdownInterval = setInterval(() => {
+            gameState.countdown -= 1; // 1秒ごとにカウントを減らす
+            broadcastGameState(); // 減らしたことを全員に通知
+
+            if (gameState.countdown <= 0) {
+                clearInterval(countdownInterval); // タイマー停止
+                gameState.status = 'playing';     // ゲーム状態を 'playing' に変更
+                console.log("ゲーム開始！");
+                // 本来はここでお題を設定する
+                // gameState.currentWord = getNextWord();
+                broadcastGameState(); // ゲームが始まったことを全員に通知
+            }
+        }, 1000);
     }
 
     // ★★★ STEP 3: 新しいプレイヤーが接続してきた時の処理 ★★★
