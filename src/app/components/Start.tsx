@@ -1,9 +1,7 @@
 "use client";
 import { useState, useEffect } from 'react';
-
 import type { GameState, Player } from '../page'
 
-// ① propsの型を定義
 interface StartScreenProps {
     gameState: GameState;
     myId: string
@@ -11,8 +9,7 @@ interface StartScreenProps {
     onNameChange: (name: string) => void;
 }
 
-// ② 定義した型をコンポーネントの引数に適用する
-export default function StartScreen({ gameState, myId,onReady, onNameChange,}: StartScreenProps) {
+export default function StartScreen({ gameState, myId, onReady, onNameChange, }: StartScreenProps) {
     const [myName, setMyName] = useState<string>('');
 
     let myPlayerInfo: Player | undefined;//ここで、もしプレイヤーがいなくても初期値が入るようにする
@@ -32,9 +29,9 @@ export default function StartScreen({ gameState, myId,onReady, onNameChange,}: S
             if (event.code === 'Space') {
                 event.preventDefault();
                 if (myName != "") {
-                    onReady(myName)
+                    onReady(myName)//準備完了にして自分の名前を登録
                 } else {
-                    alert("名前を入力してください")
+                    alert("名前を入力してください")//名前の入力を必須に
                 }
             }
         };
@@ -45,19 +42,39 @@ export default function StartScreen({ gameState, myId,onReady, onNameChange,}: S
             window.removeEventListener('keydown', handleKeyDown);
             console.log('イベントリスナーを解除しました。');
         };
-        // ③ useEffectの依存配列に socket を追加
-    }, [myName, onReady],);
+    }, [myName, onReady]);//依存関係
 
     return (
         <main style={{ padding: '20px' }}>
             <h1>すたあとがめん</h1>
             <h2>自分の名前</h2>
             <input type="text" value={myName} onChange={(e) => { setMyName(e.target.value); onNameChange(e.target.value); }} disabled={myPlayerInfo?.isReady} ></input>
-            <p>{myPlayerInfo?.isReady ? '準備完了！' : 'スペースキーを押して準備を完了する'}</p>
+
+            <p>スペースキーを押して準備を完了する</p>
+
+            {myPlayerInfo?.isReady ? (
+                <p style={{ backgroundColor: '#4caf50' }}>
+                    準備完了！
+                </p>
+            ) : (
+                <p style={{ backgroundColor: '#f44336' }}>
+                    待機中...</p>
+            )
+            }
+
             <hr />
             <p>相手の名前</p>
             <p>{opponentInfo?.name || '???'}</p>
-            <p>{opponentInfo?.isReady ? '準備完了!' : '待機中...'}</p>
+            {opponentInfo?.isReady ? (
+                <p style={{ backgroundColor: '#4caf50' }}>
+                    準備完了！
+                </p>
+            ) : (
+                <p style={{ backgroundColor: '#f44336' }}>
+                    待機中...
+                </p>
+            )
+            }
         </main>
     );
 }

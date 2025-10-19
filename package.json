@@ -3,12 +3,13 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "node src/app/server.js",
-    "build": "next build",
-    "start": "node src/app/server.js",
-    "lint": "eslint"
-  },
+  "dev": "next dev -H 0.0.0.0",
+  "build": "next build",
+  "start": "next start",
+  "lint": "next lint"
+},
   "dependencies": {
+    "framer-motion": "^12.23.24",
     "next": "15.5.5",
     "react": "19.1.0",
     "react-dom": "19.1.0",
