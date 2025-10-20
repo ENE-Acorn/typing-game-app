@@ -176,7 +176,7 @@ app.prepare().then(() => {
                     }
 
                     winner.score += 1;//スコアを加算
-                    if (winner.score >= 100) {//スコアを10個獲得した時(ゲーム終了)
+                    if (winner.score >= 10) {//スコアを10個獲得した時(ゲーム終了)
                         gameState.finishTime = Date.now();//ゲーム終了時刻
                         gameState.winnerPlayerName = winner.name;//勝者の名前
                         gameState.status = 'finished';//リザルト画面へ移行
