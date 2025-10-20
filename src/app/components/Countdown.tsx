@@ -5,7 +5,7 @@ import { motion } from 'framer-motion';//アニメーションのため
 interface CountdownScreenProps {
   gameState: GameState;
 }
-
+//gameState.countdownが3,2,1と自動で減っていくのでそれに応じて表示
 export default function CountdownScreen({ gameState }: CountdownScreenProps) {
 
   const countdown = gameState?.countdown;

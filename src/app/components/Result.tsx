@@ -1,11 +1,11 @@
 import type { GameState, Player } from '../page'
-
-interface GameScreenProps {
+interface ResultScreenProps {
   gameState: GameState;
   myId: string;
+  onReset: () => void;
 }
 
-export default function Result({ gameState, myId }: GameScreenProps){
+export default function Result({ gameState, myId, onReset}: ResultScreenProps) {
 
   let myPlayerInfo: Player | undefined;//ここで、もしプレイヤーがいなくても初期値が入るようにする
   let opponentInfo: Player | undefined;//同上
@@ -18,7 +18,12 @@ export default function Result({ gameState, myId }: GameScreenProps){
     opponentInfo = Object.values(gameState.players).find(p => p.id !== myId);
   }
   const totalTime = (gameState.finishTime - gameState.startTime) / 1000;//試合時間
-    //メモ：toFixedは切り上げですよ
+  //メモ：toFixedは切り上げですよ
+
+  const handleClick = () => {
+      onReset();//まずはResultの上司であるGameにゲームリセット処理を依頼
+    }
+
   return (
     <main>
       <p>自分の勝敗：</p>{gameState.winnerPlayerName == myPlayerInfo.name ? (
@@ -27,11 +32,16 @@ export default function Result({ gameState, myId }: GameScreenProps){
         <p>あなたの負けです</p>
       )}
       <p>自分の名前：{myPlayerInfo.name}</p>
-      <p>自分の正答率：{(myPlayerInfo.correctlyType / (myPlayerInfo.correctlyType + myPlayerInfo.missType)).toFixed(3)}%</p>
-      <p>相手の平均キータイプ数：{(myPlayerInfo.correctlyType / totalTime).toFixed(3)}</p>
+      <p>自分の正答率：{(((myPlayerInfo.correctlyType / (myPlayerInfo.correctlyType + myPlayerInfo.missType))) * 100).toFixed(3)}%</p>
+      <p>自分の平均キータイプ数：１秒あたり{(myPlayerInfo.correctlyType / totalTime).toFixed(3)}打</p>
       <p>相手の名前：{opponentInfo.name}</p>
-      <p>相手の正答率：{(opponentInfo.correctlyType / (opponentInfo.correctlyType + opponentInfo.missType)).toFixed(3)}%</p>
-      <p>相手の平均キータイプ数:{(opponentInfo.correctlyType / totalTime).toFixed(3)}</p>
-    </main>
+      <p>相手の正答率：{(((opponentInfo.correctlyType / (opponentInfo.correctlyType + opponentInfo.missType))) * 100).toFixed(3)}%</p>
+      <p>相手の平均キータイプ数:{(opponentInfo.correctlyType / totalTime).toFixed(3)}打</p>
+      <button
+        onClick={handleClick}
+        className="p-2 bg-blue-500 text-white rounded-md hover:bg-blue-600"
+      >
+        スタートに戻る
+      </button>    </main>
   );
 };

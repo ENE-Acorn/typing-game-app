@@ -11,7 +11,6 @@ export interface Player {
   id: string;
   name: string;
   isReady: boolean;
-  progress: number;
   score: number;
   missType: number;
   correctlyType: number;
@@ -25,12 +24,12 @@ export interface GameState {
   players: {
     [key: string]: Player;
   };
-   countdown: 3,
-    startTime: 0,
-    finishTime: 0,
-    currentWordJP: '',
-    currentWordRomaji: '',
-    winnerPlayerName: ""
+  countdown: 3,
+  startTime: 0,
+  finishTime: 0,
+  currentWordJP: '',
+  currentWordRomaji: '',
+  winnerPlayerName: ""
 }
 
 export default function Home() {
@@ -43,15 +42,13 @@ export default function Home() {
 
   useEffect(() => {
     // サーバーに接続
-    const ws = new WebSocket('ws://192.168.1.5:3000/ws');
+    const ws = new WebSocket('ws://172.24.72.54:3000/ws');
     setSocket(ws);
 
 
     // サーバーからメッセージを送信された場合の処理
     ws.onmessage = (event) => {
       const receivedData = JSON.parse(event.data);
-
-      console.log("サーバーからメッセージ受信:", receivedData);
 
       //サーバに接続した場合、割り振られた自分のＩＤをもらう処理
       if (receivedData.type === 'assignId') {
@@ -114,8 +111,16 @@ export default function Home() {
         correctlyType: correctlyType,
         missType: missType
       }))
+    }
   }
-}
+  
+  const handleOnReset = () => {
+    if (socket && socket.readyState === WebSocket.OPEN) {
+      socket.send(JSON.stringify({
+        type: 'gameReset'
+      }))
+    }
+  }
 
   // gameStateがまだ無い場合はローディング表示
   if (!gameState) {
@@ -132,6 +137,6 @@ export default function Home() {
   }
 
   if (gameState.status === 'playing' || gameState.status === 'finished') {
-    return <GameScreen gameState={gameState} myId={myId} onUpdateProgress={handleUpdateProgress} onWordCompleted={handleWordCompleted} onGameClear={handleGameClear} />;
+    return <GameScreen gameState={gameState} myId={myId} onUpdateProgress={handleUpdateProgress} onWordCompleted={handleWordCompleted} onGameClear={handleGameClear} onReset={handleOnReset} />;
   }
 }

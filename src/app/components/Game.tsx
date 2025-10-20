@@ -1,5 +1,5 @@
-import { useState, useEffect, useRef} from 'react';
-import type { GameState, Player } from '../page'
+import { useState, useEffect, useRef } from 'react';
+import type { GameState, Player } from '../page';
 import ResultScreen from './Result';
 
 interface GameScreenProps {
@@ -7,14 +7,15 @@ interface GameScreenProps {
   myId: string;
   onUpdateProgress: (typedText: string) => void;
   onWordCompleted: (word: string) => void;
-  onGameClear: (correctlyType: number,missType: number) => void;
+  onGameClear: (correctlyType: number, missType: number) => void;
+  onReset: () => void;
 }
 
-export default function GameScreen({ gameState, myId, onUpdateProgress, onWordCompleted,onGameClear }: GameScreenProps) {
-  
+export default function GameScreen({ gameState, myId, onUpdateProgress, onWordCompleted, onGameClear, onReset }: GameScreenProps) {
+
   const [typedText, setTypedText] = useState('');  //自分が正しく打てた文字数を記録
   const [missType, setMissType] = useState(0);  //自分が何回ミスをしたか記録
-  const [correctlyType,setCorrectlyType] = useState(0);
+  const [correctlyType, setCorrectlyType] = useState(0);
   const hasReportedRef = useRef(false);//報告フラグ(ゲーム終了時のやつ)
 
   //gameStateを分解
@@ -22,14 +23,22 @@ export default function GameScreen({ gameState, myId, onUpdateProgress, onWordCo
   const opponent = Object.values(gameState.players).find(p => p.id !== myId);
   const currentWordJP = gameState.currentWordJP; // 日本語のお題 (例: "こんにちは")
   const currentWordRomaji = gameState.currentWordRomaji; // ローマ字のお題 (例: "konnichiha")
+  
+  //同じお題が出た時にも更新するための処理
+  const totalScore = Object.values(gameState.players).reduce((sum, player) => sum + player.score, 0);
+
+
+  const handleOnReset = () => {
+    onReset();//Gameの上司であるpageにゲームリセット処理を依頼
+  }
 
   // お題が変わるたびに、自分の入力をリセットする係
   useEffect(() => {
     setTypedText('');
-  }, [currentWordRomaji]); // currentWordRomajiが変化した時だけ、この仕事を実行
+  }, [totalScore]); // currentWordRomajiが変化した時だけ、この仕事を実行
 
 
-  //0.1秒ごとに、司令塔に進捗を電話報告する係
+  //0.05秒ごとに、司令塔に進捗を電話報告する係
   useEffect(() => {
     const interval = setInterval(() => {
       // ゲームがプレイ中じゃなければ報告しない
@@ -39,7 +48,7 @@ export default function GameScreen({ gameState, myId, onUpdateProgress, onWordCo
         typedText//自分が今何文字目かだけ送信
       );
 
-    }, 100); // 0.1秒ごとに実行
+    }, 50); // 0.05秒ごとに実行
 
     return () => clearInterval(interval); // この部品が不要になったら、電話をかけ続けるのをやめる
   }, [typedText, missType, currentWordRomaji, gameState.status, onUpdateProgress]);
@@ -48,12 +57,12 @@ export default function GameScreen({ gameState, myId, onUpdateProgress, onWordCo
   useEffect(() => {
     // ゲームが終了し、かつまだ報告していない場合
     if (gameState.status === 'finished' && !hasReportedRef.current) {
-      onGameClear(correctlyType, missType);
+      onGameClear(correctlyType, missType);//ゲームのクリアを報告する
 
       hasReportedRef.current = true; // 報告済みフラグを立てる
     }
   }, [gameState.status, onGameClear, correctlyType, missType]);
-  
+
   //キーボードが押されるたびに、瞬時に反応する係
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -68,8 +77,8 @@ export default function GameScreen({ gameState, myId, onUpdateProgress, onWordCo
         // 【正解！】
         const newTypedText = typedText + e.key;
         setTypedText(newTypedText); // 正しく打てた文字を記憶
-        
-        setCorrectlyType(prev=> prev + 1);
+
+        setCorrectlyType(prev => prev + 1);
 
         if (newTypedText === currentWordRomaji) {
           //ワードを打ち切った場合
@@ -86,7 +95,7 @@ export default function GameScreen({ gameState, myId, onUpdateProgress, onWordCo
   }, [typedText, currentWordRomaji, gameState.status, onWordCompleted, missType]);
 
   if (gameState.status === 'finished') {//ゲームが終わっていたらリザルト画面へ
-    return <ResultScreen gameState={gameState} myId ={myId} />;
+    return <ResultScreen gameState={gameState} myId={myId} onReset={handleOnReset} />;
   }
 
   // お題の文字を色分けして表示するための小さな部品
@@ -102,18 +111,18 @@ export default function GameScreen({ gameState, myId, onUpdateProgress, onWordCo
 
   return (
     <main>
-    <p>{currentWordJP}</p>
-    <p>{myPlayer?.name || ''}</p>
-    <p>{myPlayer?.score || ''}</p>
-    <p>{renderWord(typedText)}</p>
-    <hr></hr>
-    <p>{opponent?.name || ''}</p>
-    <p>{opponent?.score || ''}</p>
-    {opponent.typedText}
-    <p>{renderWord(opponent?.typedText)}</p>
+      <p>{currentWordJP}</p>
+      <p>{myPlayer?.name || ''}</p>
+      <p>{myPlayer?.score || ''}</p>
+      <p>自分のワード：{renderWord(typedText)}</p>
+      <hr></hr>
+      <p>{opponent?.name || ''}</p>
+      <p>{opponent?.score || ''}</p>
+      {opponent.typedText}
+      <p>相手のワード{renderWord(opponent?.typedText)}</p>
 
-    <p>自分のミス回数:{missType}</p>
-    <p>自分の正しく打った回数:{correctlyType}</p>
+      <p>自分のミス回数:{missType}</p>
+      <p>自分の正しく打った回数:{correctlyType}</p>
     </main>
   );
 }

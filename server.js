@@ -91,13 +91,6 @@ app.prepare().then(() => {
                 gameState.currentWordJP = word.jp
                 gameState.currentWordRomaji = word.romaji//最初のお題を読み取る
 
-                for (const playerId in gameState.players) {//ゲームに関係する値を初期化
-                    const player = gameState.players[playerId];
-
-                    player.correctlyType = 0;
-                    player.missType = 0;
-                    player.score = 0;
-                }
                 broadcastGameState(); // ゲームが始まったことを全員に通知
             }
         }, 1000);
@@ -122,7 +115,7 @@ app.prepare().then(() => {
         if (Object.keys(gameState.players).length < 2) {
             gameState.players[playerId] = {
                 id: playerId,
-                name: '名無しのごんべえ',
+                name: 'unknownさん',
                 isReady: false,
                 progress: 0,
                 score: 0,
@@ -177,22 +170,13 @@ app.prepare().then(() => {
 
                     console.log(`${winner.name}がラウンド勝利！`);
 
-                    // for (const pId in gameState.players) {
-                    //     const p = gameState.players[pId];
-                    //     const roundStats = currentRoundstats[pId];
-                    //     if (p && roundStats) {
-                    //         p.totalMistakes += roundStats.mistakes;
-                    //         p.totalCorrectlyType += roundStats.correctlyType;
-                    //     }
-                    // }
                     for (const pId in gameState.players) {
                         const p = gameState.players[pId];
                         p.typedText = "";//サーバに上がってるtypedTextを初期化
                     }
 
                     winner.score += 1;//スコアを加算
-
-                    if (winner.score >= 10) {//スコアを10個獲得した時(ゲーム終了)
+                    if (winner.score >= 100) {//スコアを10個獲得した時(ゲーム終了)
                         gameState.finishTime = Date.now();//ゲーム終了時刻
                         gameState.winnerPlayerName = winner.name;//勝者の名前
                         gameState.status = 'finished';//リザルト画面へ移行
@@ -208,6 +192,26 @@ app.prepare().then(() => {
                 case "gameClear"://ゲーム終了時にプレイヤーの成績をサーバに送信してきた時の処理
                     player.correctlyType = receivedMessage.correctlyType;
                     player.missType = receivedMessage.missType;
+                    broadcastGameState();
+                    break;
+                case "gameReset":
+                    for (const playerId in gameState.players) {//ゲームに関係する値を初期化
+                        const player = gameState.players[playerId];
+
+                        player.correctlyType = 0;
+                        player.missType = 0;
+                        player.score = 0;
+                        player.name = "";
+                        player.isReady = false;
+                        player.typedText = "";
+                    }
+                    gameState.startTime = 0,
+                    gameState.finishTime = 0,
+                    gameState.winnerPlayerName = "";
+                    gameState.countdown = 3;
+
+                    gameState.status = "waiting";
+
                     broadcastGameState();
                     break;
 
