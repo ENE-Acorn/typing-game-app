@@ -2,6 +2,12 @@ import { useState, useEffect, useRef } from 'react';
 import type { GameState, Player } from '../page';
 import ResultScreen from './Result';
 
+
+//CSSファイルをインポート
+import './Game.model.css';
+// styleオブジェクトの型定義のためにReactをインポート
+import React from 'react';
+
 interface GameScreenProps {
   gameState: GameState;
   myId: string;
@@ -117,30 +123,49 @@ export default function GameScreen({ gameState, myId, onUpdateProgress, onWordCo
     return currentWordRomaji.split('').map((char, index) => {
       let color = '#6c757d'; // 未入力の文字はグレー
       if (index < render.length) {
-        color = '#ffffff'; // 正しく入力された文字は白
+        color = '#46b963ff'; // 正しく入力された文字は白
       }
       return <span key={index} style={{ color, fontSize: '3rem', margin: '0 2px' }}>{char}</span>;
     });
   };
+  
+  return (
+    <main className="container"> 
+      
+      <div className="questionWord">
+        {currentWordJP}
+      </div>
 
-return (
-  <main>
-    <p>{currentWordJP}</p>
-    <p>{myPlayer?.name || ''}</p>
-    <p>{myPlayer?.score || ''}</p>
-    <p>連続正解数{consecutiveCount.current}</p>
-    <p>ライトレベル：{lightLevel}</p>
-    <p>自分のワード：{renderWord(typedText)}</p>
-    <hr></hr>
-    <p>{opponent?.name || ''}</p>
-    <p>{opponent?.score || ''}</p>
-    {opponent.typedText}
-    <p>相手のワード{renderWord(opponent?.typedText)}</p>
+      <div className="playersContainer">
 
-    <p>自分のミス回数:{missType}</p>
-    <p>自分の正しく打った回数:{correctlyType}</p>
-    <hr></hr>
-    <p>{myPlayer.interferenceType}</p>
-  </main>
-)
+        {/* 自分のエリア (妨害クラス指定を削除) */}
+        <div className="playerBox myPlayerBox">
+          
+          <div className="playerName">{myPlayer?.name || 'YOU'}</div>
+          <div className="playerScore">{myPlayer?.score || 0}</div>
+          
+          <div className="typingArea">
+            {renderWord(typedText)}
+          </div>
+          
+          {/* 妨害中テキストを削除 */}
+
+          <div className="statsContainer">
+            <p className="statText">Correct: {correctlyType}</p>
+            <p className="statText">Miss: {missType}</p>
+          </div>
+        </div>
+
+        {/* 相手のエリア */}
+        <div className="playerBox opponentPlayerBox">
+          <div className="playerName">{opponent?.name || 'OPPONENT'}</div>
+          <div className="playerScore">{opponent?.score || 0}</div>
+          <div className="typingArea">
+            {opponent ? renderWord(opponent.typedText) : <span style={{ color: '#a0a0a0' }}>...</span>}
+          </div>
+        </div>
+
+      </div>
+    </main>
+  );
 }
