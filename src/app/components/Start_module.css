@@ -1,0 +1,60 @@
+/* .container が StartScreen の外側の要素に適用されます */
+.container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 20px; /* 要素間のスペース */
+  padding: 40px;
+  background-color: #f0f0f0; /* 少し明るい背景 */
+  border-radius: 10px;
+  color: #333; /* 文字色を濃いグレーに */
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+}
+
+.title {
+  font-size: 2.5rem;
+  color: #007bff; /* タイトルの色 */
+}
+
+.input {
+  padding: 10px 15px;
+  font-size: 1rem;
+  border: 2px solid #ccc;
+  border-radius: 5px;
+  width: 250px;
+}
+
+.readyButton {
+  padding: 12px 25px;
+  font-size: 1.1rem;
+  font-weight: bold;
+  color: white;
+  background-color: #28a745; /* 緑色 */
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+  transition: background-color 0.3s ease;
+}
+
+.readyButton:hover {
+  background-color: #218838; /* ホバー時に少し濃く */
+}
+
+.playerList {
+  list-style: none;
+  padding: 0;
+  width: 100%;
+}
+
+.playerItem {
+  padding: 10px;
+  margin-bottom: 5px;
+  background-color: #fff;
+  border: 1px solid #ddd;
+  border-radius: 5px;
+}
+
+.playerItem.ready {
+  background-color: #d4edda; /* 準備完了のプレイヤー */
+  border-color: #c3e6cb;
+}
