@@ -98,7 +98,6 @@ export default function GameScreen({ gameState, myId, onUpdateProgress, onWordCo
     return <ResultScreen gameState={gameState} myId={myId} onReset={handleOnReset} />;
   }
 
-  // お題の文字を色分けして表示するための小さな部品
   const renderWord = (render) => {
     return currentWordRomaji.split('').map((char, index) => {
       let color = '#6c757d'; // 未入力の文字はグレー
