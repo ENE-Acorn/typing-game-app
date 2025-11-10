@@ -15,6 +15,7 @@ export interface Player {
   missType: number;
   correctlyType: number;
   typedText: string;
+  interferenceType: string;
 }
 
 // GameStateの設計図
@@ -42,7 +43,7 @@ export default function Home() {
 
   useEffect(() => {
     // サーバーに接続
-    const ws = new WebSocket('ws://172.24.72.54:3000/ws');
+    const ws = new WebSocket('ws://172.24.72.22:3000/ws');
     setSocket(ws);
 
 
@@ -84,11 +85,12 @@ export default function Home() {
   }
 
   //ゲーム中に１００ミリ秒ごとに定期的に送られる進捗などのデータ送信
-  const handleUpdateProgress = (typedText: string) => {
+  const handleUpdateProgress = (typedText: string,lightLevel: number) => {
     if (socket && socket.readyState === WebSocket.OPEN) {
       socket.send(JSON.stringify({
         type: 'updateProgress',
-        typedText: typedText
+        typedText: typedText,
+        lightLevel: lightLevel
       }))
     }
   }
