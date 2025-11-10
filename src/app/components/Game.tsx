@@ -11,7 +11,7 @@ import React from 'react';
 interface GameScreenProps {
   gameState: GameState;
   myId: string;
-  onUpdateProgress: (typedText: string) => void;
+  onUpdateProgress: (typedText: string, lightLevel: number) => void;
   onWordCompleted: (word: string) => void;
   onGameClear: (correctlyType: number, missType: number) => void;
   onReset: () => void;
@@ -22,14 +22,16 @@ export default function GameScreen({ gameState, myId, onUpdateProgress, onWordCo
   const [typedText, setTypedText] = useState('');  //自分が正しく打てた文字数を記録
   const [missType, setMissType] = useState(0);  //自分が何回ミスをしたか記録
   const [correctlyType, setCorrectlyType] = useState(0);
+  const [lightLevel, setLightLevel] = useState(0);
   const hasReportedRef = useRef(false);//報告フラグ(ゲーム終了時のやつ)
+  const consecutiveCount = useRef(0)
 
   //gameStateを分解
   const myPlayer = gameState.players[myId];
   const opponent = Object.values(gameState.players).find(p => p.id !== myId);
   const currentWordJP = gameState.currentWordJP; // 日本語のお題 (例: "こんにちは")
   const currentWordRomaji = gameState.currentWordRomaji; // ローマ字のお題 (例: "konnichiha")
-  
+
   //同じお題が出た時にも更新するための処理
   const totalScore = Object.values(gameState.players).reduce((sum, player) => sum + player.score, 0);
 
@@ -51,13 +53,17 @@ export default function GameScreen({ gameState, myId, onUpdateProgress, onWordCo
       if (gameState.status !== 'playing') return;
 
       onUpdateProgress(
-        typedText//自分が今何文字目かだけ送信
+        typedText, lightLevel
       );
+      
+      if(lightLevel == 5){
+        setLightLevel(0);
+      }
 
     }, 50); // 0.05秒ごとに実行
 
     return () => clearInterval(interval); // この部品が不要になったら、電話をかけ続けるのをやめる
-  }, [typedText, missType, currentWordRomaji, gameState.status, onUpdateProgress]);
+  }, [typedText, missType, currentWordRomaji, lightLevel, gameState.status, onUpdateProgress]);
 
 
   useEffect(() => {
@@ -86,12 +92,20 @@ export default function GameScreen({ gameState, myId, onUpdateProgress, onWordCo
 
         setCorrectlyType(prev => prev + 1);
 
+        consecutiveCount.current++;
+
+        setLightLevel(consecutiveCount.current / 10);
+        if (consecutiveCount.current >= 50) {
+          consecutiveCount.current = 0;
+        }
+
         if (newTypedText === currentWordRomaji) {
           //ワードを打ち切った場合
           onWordCompleted(currentWordRomaji);//サーバに通信
         }
       } else {
         // 【不正解...】
+        consecutiveCount.current = 0;
         setMissType(prev => prev + 1); // ミスカウンターを1増やす
       }
     };
@@ -114,7 +128,7 @@ export default function GameScreen({ gameState, myId, onUpdateProgress, onWordCo
       return <span key={index} style={{ color, fontSize: '3rem', margin: '0 2px' }}>{char}</span>;
     });
   };
-
+  
   return (
     <main className="container"> 
       

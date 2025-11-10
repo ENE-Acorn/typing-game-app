@@ -25,10 +25,17 @@ let gameState = {
     currentWordRomaji: '',
     winnerPlayerName: ""
 };
-
+const interferenceList = [
+    'smallText', // 文字を小さく
+    'bounce',    // 文字を上下に
+    'smoke',     // 霧がかかる（CSSクラス名は 'smoke' と仮定）
+    'invert',    // 画面反転
+    'colorInvert'// 色反転
+];
 //接続しているクライアント全員を管理するリスト
 const clients = new Set();
 let nextPlayerId = 1; // 次に接続してくるプレイヤーの番号
+let picoClient = null;
 
 app.prepare().then(() => {
     const server = createServer((req, res) => {
@@ -58,7 +65,9 @@ app.prepare().then(() => {
         };
         const messageString = JSON.stringify(message);
         for (const client of clients) {
-            client.send(messageString);
+            if (client.readyState === 1 && client !== picoClient) {
+                client.send(messageString);
+            }
         }
     }
 
@@ -119,7 +128,8 @@ app.prepare().then(() => {
                 isReady: false,
                 progress: 0,
                 score: 0,
-                typedText: ""
+                typedText: "",
+                interferenceType: "null"
             };
             console.log(`${playerId} が接続しました。`);
         }
@@ -136,6 +146,12 @@ app.prepare().then(() => {
 
             // メッセージの種類に応じて処理を振り分け
             switch (receivedMessage.type) {
+
+                case "pico_connect":
+                    console.log("Raspberry Pi Picoが接続しました。");
+                    picoClient = ws; // Picoの接続を専用変数に保存
+                    break;
+
                 case "playerReady":
                     // 送信元のプレイヤーのisReadyをtrueにする
                     if (gameState.players[ws.playerId]) {
@@ -158,6 +174,28 @@ app.prepare().then(() => {
                 case "updateProgress"://ゲーム中のどこまで打ったか定期で更新
 
                     player.typedText = receivedMessage.typedText;
+
+                    if (picoClient && picoClient.readyState === 1) { // 1はWebSocket.OPENの意味
+                        picoClient.send(JSON.stringify({
+                            type: "progressUpdate",//定期でプレイヤーのライトをどこまで点灯させるか送信
+                            playerId: player.id,
+                            lightLevel: receivedMessage.lightLevel
+                        }));
+                    }
+                    opponent = Object.values(gameState.players).find(p => p.id !== player.id);
+
+                    if (receivedMessage.lightLevel == 5 && opponent.interferenceType == "null") {
+
+                        opponent.interferenceType = interferenceList[Math.floor(Math.random() * interferenceList.length)];
+
+                        setTimeout(() => {
+                            opponent = Object.values(gameState.players).find(p => p.id !== player.id);
+                            opponent.interferenceType = "null";
+                            console.log("妨害終了");
+                            broadcastGameState();
+                        }, 5000)
+                    }
+
 
                     broadcastGameState();
                     break;
@@ -192,6 +230,13 @@ app.prepare().then(() => {
                 case "gameClear"://ゲーム終了時にプレイヤーの成績をサーバに送信してきた時の処理
                     player.correctlyType = receivedMessage.correctlyType;
                     player.missType = receivedMessage.missType;
+
+                    if (picoClient && picoClient.readyState === 1) { // 1はWebSocket.OPENの意味
+                        picoClient.send(JSON.stringify({
+                            type: "gameClear",//ゲームが終わった時にライトを消灯させる処理
+                        }));
+                    }
+
                     broadcastGameState();
                     break;
                 case "gameReset":
@@ -206,8 +251,8 @@ app.prepare().then(() => {
                         player.typedText = "";
                     }
                     gameState.startTime = 0,
-                    gameState.finishTime = 0,
-                    gameState.winnerPlayerName = "";
+                        gameState.finishTime = 0,
+                        gameState.winnerPlayerName = "";
                     gameState.countdown = 3;
 
                     gameState.status = "waiting";
@@ -220,6 +265,10 @@ app.prepare().then(() => {
 
         ws.on('close', () => {
             clients.delete(ws);
+            if (ws === picoClient) {
+                console.log("Picoが切断しました。");
+                picoClient = null;
+            }
             // プレイヤーが切断されたらgameStateから削除する処理も本当は必要
             console.log(`${ws.playerId} が切断しました。`);
         });
