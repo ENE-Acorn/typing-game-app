@@ -43,6 +43,7 @@ export default function Home() {
 
   useEffect(() => {
     // サーバーに接続
+
     const ws = new WebSocket('ws://172.24.63.84:3000/ws');
     setSocket(ws);
 
