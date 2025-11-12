@@ -147,6 +147,11 @@ app.prepare().then(() => {
             // メッセージの種類に応じて処理を振り分け
             switch (receivedMessage.type) {
 
+                case "ping":
+                    // クライアントからのpingに応答する
+                    ws.send(JSON.stringify({ type: 'pong' }));
+                    break;
+
                 case "pico_connect":
                     console.log("Raspberry Pi Picoが接続しました。");
                     picoClient = ws; // Picoの接続を専用変数に保存

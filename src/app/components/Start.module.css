@@ -5,7 +5,7 @@
   align-items: center;
   gap: 20px; /* 要素間のスペース */
   padding: 40px;
-  background-color: #f0f0f0; /* 少し明るい背景 */
+  background-color: #d8e8ed; /* 少し明るい背景 */
   border-radius: 10px;
   color: #333; /* 文字色を濃いグレーに */
   box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
