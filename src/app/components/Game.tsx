@@ -2,10 +2,16 @@ import { useState, useEffect, useRef } from 'react';
 import type { GameState, Player } from '../page';
 import ResultScreen from './Result';
 
+
+//CSSファイルをインポート
+import './Game.model.css';
+// styleオブジェクトの型定義のためにReactをインポート
+import React from 'react';
+
 interface GameScreenProps {
   gameState: GameState;
   myId: string;
-  onUpdateProgress: (typedText: string) => void;
+  onUpdateProgress: (typedText: string, lightLevel: number) => void;
   onWordCompleted: (word: string) => void;
   onGameClear: (correctlyType: number, missType: number) => void;
   onReset: () => void;
@@ -16,17 +22,30 @@ export default function GameScreen({ gameState, myId, onUpdateProgress, onWordCo
   const [typedText, setTypedText] = useState('');  //自分が正しく打てた文字数を記録
   const [missType, setMissType] = useState(0);  //自分が何回ミスをしたか記録
   const [correctlyType, setCorrectlyType] = useState(0);
+  const [lightLevel, setLightLevel] = useState(0);
   const hasReportedRef = useRef(false);//報告フラグ(ゲーム終了時のやつ)
+  const consecutiveCount = useRef(0)
 
   //gameStateを分解
   const myPlayer = gameState.players[myId];
   const opponent = Object.values(gameState.players).find(p => p.id !== myId);
   const currentWordJP = gameState.currentWordJP; // 日本語のお題 (例: "こんにちは")
   const currentWordRomaji = gameState.currentWordRomaji; // ローマ字のお題 (例: "konnichiha")
-  
+
   //同じお題が出た時にも更新するための処理
   const totalScore = Object.values(gameState.players).reduce((sum, player) => sum + player.score, 0);
 
+  useEffect(() => {
+    // このコンポーネント（StartScreen）が表示されたら
+    // bodyタグのmarginを強制的に0にする
+    document.body.style.margin = '0';
+
+    // このコンポーネントが非表示になるとき
+    return () => {
+      // bodyタグのmarginを元に戻す（他の画面に影響しないように）
+      document.body.style.margin = '';
+    };
+  }, []);
 
   const handleOnReset = () => {
     onReset();//Gameの上司であるpageにゲームリセット処理を依頼
@@ -45,13 +64,17 @@ export default function GameScreen({ gameState, myId, onUpdateProgress, onWordCo
       if (gameState.status !== 'playing') return;
 
       onUpdateProgress(
-        typedText//自分が今何文字目かだけ送信
+        typedText, lightLevel
       );
+
+      if (lightLevel == 5) {
+        setLightLevel(0);
+      }
 
     }, 50); // 0.05秒ごとに実行
 
     return () => clearInterval(interval); // この部品が不要になったら、電話をかけ続けるのをやめる
-  }, [typedText, missType, currentWordRomaji, gameState.status, onUpdateProgress]);
+  }, [typedText, missType, currentWordRomaji, lightLevel, gameState.status, onUpdateProgress]);
 
 
   useEffect(() => {
@@ -80,12 +103,21 @@ export default function GameScreen({ gameState, myId, onUpdateProgress, onWordCo
 
         setCorrectlyType(prev => prev + 1);
 
+        consecutiveCount.current++;
+
+        setLightLevel(consecutiveCount.current / 10);
+        if (consecutiveCount.current >= 50) {
+          consecutiveCount.current = 0;
+        }
+
         if (newTypedText === currentWordRomaji) {
           //ワードを打ち切った場合
           onWordCompleted(currentWordRomaji);//サーバに通信
         }
       } else {
         // 【不正解...】
+        consecutiveCount.current = 0;
+        setLightLevel(0);
         setMissType(prev => prev + 1); // ミスカウンターを1増やす
       }
     };
@@ -103,26 +135,67 @@ export default function GameScreen({ gameState, myId, onUpdateProgress, onWordCo
     return currentWordRomaji.split('').map((char, index) => {
       let color = '#6c757d'; // 未入力の文字はグレー
       if (index < render.length) {
-        color = '#ffffff'; // 正しく入力された文字は白
+        color = '#46b963ff'; // 正しく入力された文字は白
       }
       return <span key={index} style={{ color, fontSize: '3rem', margin: '0 2px' }}>{char}</span>;
     });
   };
 
-  return (
-    <main>
-      <p>{currentWordJP}</p>
-      <p>{myPlayer?.name || ''}</p>
-      <p>{myPlayer?.score || ''}</p>
-      <p>自分のワード：{renderWord(typedText)}</p>
-      <hr></hr>
-      <p>{opponent?.name || ''}</p>
-      <p>{opponent?.score || ''}</p>
-      {opponent.typedText}
-      <p>相手のワード{renderWord(opponent?.typedText)}</p>
+  const myInterference = myPlayer?.interferenceType || "null";
 
-      <p>自分のミス回数:{missType}</p>
-      <p>自分の正しく打った回数:{correctlyType}</p>
+  const myPlayerBoxClasses = `
+    playerBox 
+    myPlayerBox 
+    ${myInterference === 'bounce' ? 'is-bouncing' : ''}
+    ${myInterference === 'smallText' ? 'is-small-text' : ''}
+    ${myInterference === 'colorInvert' ? 'is-color-inverted' : ''}
+  `;
+
+  const mainContainerClasses = `
+    container 
+    ${myInterference === 'colorInvert' ? 'is-color-inverted' : ''}
+    ${myInterference === 'invert' ? 'is-inverted' : ''}
+  `;
+
+  return (
+    <main className={mainContainerClasses}>
+
+      <div className="questionWord">
+        {currentWordJP}
+      </div>
+
+      <div className="playersContainer">
+
+        <div className={myPlayerBoxClasses}>
+
+          <div className="playerName">{myPlayer?.name || 'YOU'}</div>
+          <div className="playerScore">{myPlayer?.score || 0}</div>
+
+          <div className="typingArea">
+            {renderWord(typedText)}
+          </div>
+
+          <div className="statsContainer">
+            <p className="statText">Correct: {lightLevel}</p>
+            <p className="statText">Miss: {opponent.interferenceType}</p>
+          </div>
+        </div>
+
+        {/* 相手のエリア */}
+        <div className="playerBox opponentPlayerBox">
+          <div className="playerName">{opponent?.name || 'OPPONENT'}</div>
+          <div className="playerScore">{opponent?.score || 0}</div>
+          <div className="typingArea">
+            {opponent ? renderWord(opponent.typedText) : <span style={{ color: '#a0a0a0' }}>...</span>}
+          </div>
+        </div>
+
+      </div>
+      {myInterference === 'smoke' && (
+        <div className="smoke-overlay">
+          <p>妨害発動中！</p>
+        </div>
+      )}
     </main>
   );
 }

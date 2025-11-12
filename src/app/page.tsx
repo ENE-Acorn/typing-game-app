@@ -15,6 +15,7 @@ export interface Player {
   missType: number;
   correctlyType: number;
   typedText: string;
+  interferenceType: string;
 }
 
 // GameStateの設計図
@@ -42,7 +43,8 @@ export default function Home() {
 
   useEffect(() => {
     // サーバーに接続
-    const ws = new WebSocket('ws://192.168.8.104:3000/ws');
+
+    const ws = new WebSocket('ws://172.24.63.84:3000/ws');
     setSocket(ws);
 
 
@@ -60,7 +62,14 @@ export default function Home() {
         setGameState(receivedData.state);
       }
     };
+    // 接続維持のためのハートビート（30秒ごとにpingを送信）
+    const heartbeatInterval = setInterval(() => {
+      if (ws.readyState === WebSocket.OPEN) {
+        ws.send(JSON.stringify({ type: 'ping' }));
+      }
+    }, 30000); // 30秒ごと
   }, []);
+
 
   //プレイヤーの名前が変わった場合の通信
   const handleNameChange = (name: string) => {
@@ -84,11 +93,12 @@ export default function Home() {
   }
 
   //ゲーム中に１００ミリ秒ごとに定期的に送られる進捗などのデータ送信
-  const handleUpdateProgress = (typedText: string) => {
+  const handleUpdateProgress = (typedText: string,lightLevel: number) => {
     if (socket && socket.readyState === WebSocket.OPEN) {
       socket.send(JSON.stringify({
         type: 'updateProgress',
-        typedText: typedText
+        typedText: typedText,
+        lightLevel: lightLevel
       }))
     }
   }
