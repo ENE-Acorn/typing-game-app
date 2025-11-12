@@ -1,0 +1,104 @@
+.container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  background-color: #e6f0f6;
+  min-height: 100vh;
+  padding: 2rem;
+  text-align: center;
+}
+
+/* タイトル（自分の勝敗） */
+.container > p:first-of-type {
+  font-size: 2.5rem;
+  font-weight: bold;
+  margin-bottom: 1rem;
+  color: #1e293b;
+}
+
+/* 勝ち／負け 表示 */
+.container > p:nth-of-type(2) {
+  font-size: 2rem;
+  color: #f59e0b;
+  background-color: #fef9c3;
+  padding: 0.3rem 1rem;
+  border-radius: 0.5rem;
+  margin-bottom: 3rem;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+}
+
+/* 自分と相手を横並びに配置するラッパー */
+.resultRow {
+  display: flex;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 2rem;
+  width: 100%;
+  max-width: 1000px;
+}
+
+/* 自分 or 相手のカード */
+.card {
+  background-color: #ffffff;
+  border-radius: 1rem;
+  flex: 1;
+  min-width: 280px;
+  padding: 1.5rem;
+  text-align: center;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+}
+
+/* 自分カード（青枠） */
+.myCard {
+  border-top: 4px solid #3b82f6;
+}
+
+/* 相手カード（赤枠） */
+.opponentCard {
+  border-top: 4px solid #f87171;
+}
+
+/* pタグ群をカード内でまとめる */
+.card p {
+  margin: 0.4rem 0;
+  color: #334155;
+}
+
+/* ボタン */
+.container button {
+  margin-top: 2rem;
+  padding: 0.75rem 1.5rem;
+  background-color: #3b82f6;
+  color: #fff;
+  border: none;
+  border-radius: 0.5rem;
+  font-size: 1rem;
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+}
+
+.container button:hover {
+  background-color: #2563eb;
+}
+.myCard p:first-of-type {
+  font-size: 1.5rem;
+  font-weight: 600;
+  color: #2563eb;
+  text-shadow: 0 1px 2px rgba(0,0,0,0.1);
+}
+
+.opponentCard p:first-of-type {
+  font-size: 1.5rem;
+  font-weight: 600;
+  color: #ef4444;
+  text-shadow: 0 1px 2px rgba(0,0,0,0.1);
+}
+
+
+
+
+
+
+
+
+
