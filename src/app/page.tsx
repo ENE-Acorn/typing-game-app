@@ -43,7 +43,7 @@ export default function Home() {
 
   useEffect(() => {
     // サーバーに接続
-    const ws = new WebSocket('ws://172.24.72.22:3000/ws');
+    const ws = new WebSocket('ws://172.24.63.84:3000/ws');
     setSocket(ws);
 
 
@@ -61,7 +61,14 @@ export default function Home() {
         setGameState(receivedData.state);
       }
     };
+    // 接続維持のためのハートビート（30秒ごとにpingを送信）
+    const heartbeatInterval = setInterval(() => {
+      if (ws.readyState === WebSocket.OPEN) {
+        ws.send(JSON.stringify({ type: 'ping' }));
+      }
+    }, 30000); // 30秒ごと
   }, []);
+
 
   //プレイヤーの名前が変わった場合の通信
   const handleNameChange = (name: string) => {

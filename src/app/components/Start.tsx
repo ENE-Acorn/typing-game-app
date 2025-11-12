@@ -24,6 +24,17 @@ export default function StartScreen({ gameState, myId, onReady, onNameChange, }:
         opponentInfo = Object.values(gameState.players).find(p => p.id !== myId);
     }
     useEffect(() => {
+        // このコンポーネント（StartScreen）が表示されたら
+        // bodyタグのmarginを強制的に0にする
+        document.body.style.margin = '0';
+
+        // このコンポーネントが非表示になるとき
+        return () => {
+            // bodyタグのmarginを元に戻す（他の画面に影響しないように）
+            document.body.style.margin = ''; 
+        };
+    }, []);
+    useEffect(() => {
 
         // eventの型を KeyboardEvent と明記する
         const handleKeyDown = (event: KeyboardEvent) => {
@@ -46,7 +57,7 @@ export default function StartScreen({ gameState, myId, onReady, onNameChange, }:
     }, [myName, onReady]);//依存関係
 
     return (
-        <main style={{ padding: '20px', width: '100%',backgroundColor:'skyblue',minHeight:'100' }}>
+        <main style={{ padding: '20px', width: '100%',backgroundColor: '#d8e8ed',minHeight:'100vh',boxSizing:'border-box'}}>
             <h1>すたあとがめん</h1>
             <p>スペースキーを押して準備を完了する</p>
 

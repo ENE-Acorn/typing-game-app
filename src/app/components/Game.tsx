@@ -35,6 +35,17 @@ export default function GameScreen({ gameState, myId, onUpdateProgress, onWordCo
   //同じお題が出た時にも更新するための処理
   const totalScore = Object.values(gameState.players).reduce((sum, player) => sum + player.score, 0);
 
+  useEffect(() => {
+    // このコンポーネント（StartScreen）が表示されたら
+    // bodyタグのmarginを強制的に0にする
+    document.body.style.margin = '0';
+
+    // このコンポーネントが非表示になるとき
+    return () => {
+      // bodyタグのmarginを元に戻す（他の画面に影響しないように）
+      document.body.style.margin = '';
+    };
+  }, []);
 
   const handleOnReset = () => {
     onReset();//Gameの上司であるpageにゲームリセット処理を依頼
@@ -55,8 +66,8 @@ export default function GameScreen({ gameState, myId, onUpdateProgress, onWordCo
       onUpdateProgress(
         typedText, lightLevel
       );
-      
-      if(lightLevel == 5){
+
+      if (lightLevel == 5) {
         setLightLevel(0);
       }
 
@@ -106,6 +117,7 @@ export default function GameScreen({ gameState, myId, onUpdateProgress, onWordCo
       } else {
         // 【不正解...】
         consecutiveCount.current = 0;
+        setLightLevel(0);
         setMissType(prev => prev + 1); // ミスカウンターを1増やす
       }
     };
@@ -128,31 +140,44 @@ export default function GameScreen({ gameState, myId, onUpdateProgress, onWordCo
       return <span key={index} style={{ color, fontSize: '3rem', margin: '0 2px' }}>{char}</span>;
     });
   };
-  
+
+  const myInterference = myPlayer?.interferenceType || "null";
+
+  const myPlayerBoxClasses = `
+    playerBox 
+    myPlayerBox 
+    ${myInterference === 'bounce' ? 'is-bouncing' : ''}
+    ${myInterference === 'smallText' ? 'is-small-text' : ''}
+    ${myInterference === 'colorInvert' ? 'is-color-inverted' : ''}
+  `;
+
+  const mainContainerClasses = `
+    container 
+    ${myInterference === 'colorInvert' ? 'is-color-inverted' : ''}
+    ${myInterference === 'invert' ? 'is-inverted' : ''}
+  `;
+
   return (
-    <main className="container"> 
-      
+    <main className={mainContainerClasses}>
+
       <div className="questionWord">
         {currentWordJP}
       </div>
 
       <div className="playersContainer">
 
-        {/* 自分のエリア (妨害クラス指定を削除) */}
-        <div className="playerBox myPlayerBox">
-          
+        <div className={myPlayerBoxClasses}>
+
           <div className="playerName">{myPlayer?.name || 'YOU'}</div>
           <div className="playerScore">{myPlayer?.score || 0}</div>
-          
+
           <div className="typingArea">
             {renderWord(typedText)}
           </div>
-          
-          {/* 妨害中テキストを削除 */}
 
           <div className="statsContainer">
-            <p className="statText">Correct: {correctlyType}</p>
-            <p className="statText">Miss: {missType}</p>
+            <p className="statText">Correct: {lightLevel}</p>
+            <p className="statText">Miss: {opponent.interferenceType}</p>
           </div>
         </div>
 
@@ -166,6 +191,11 @@ export default function GameScreen({ gameState, myId, onUpdateProgress, onWordCo
         </div>
 
       </div>
+      {myInterference === 'smoke' && (
+        <div className="smoke-overlay">
+          <p>妨害発動中！</p>
+        </div>
+      )}
     </main>
   );
 }

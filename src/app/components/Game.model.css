@@ -96,3 +96,55 @@
   font-size: 0.9rem;
   margin: 5px 0;
 }
+.is-small-text .typingArea {
+  transform: scale(0.3); /* 30%に縮小 */
+  transition: transform 0.3s ease-in-out;
+  font-size: 1.5rem; /* 小さくしても読めるように調整*/
+}
+
+/*上下にバウンド (ボックス全体を揺らす) */
+.is-bouncing {
+  animation: bounce-animation 0.2s ease-in-out infinite alternate;
+}
+@keyframes bounce-animation {
+  from { transform: translateY(0px); }
+  to { transform: translateY(-40px); }
+}
+
+/*霧がかかる (これは画面全体) */
+.smoke-overlay {
+  position: fixed;
+  top: 0; left: 0;
+  width: 100vw; height: 100vh;
+  background-color: rgba(50, 50, 50, 0.85); 
+  color: white;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  font-size: 3rem;
+  z-index: 999; 
+  animation: fadeIn 0.5s ease-in-out;
+}
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+/*画面反転 (画面全体) */
+/* .container に .is-inverted が付いた時のスタイル */
+.is-inverted {
+  transform: scaleY(-1); /* 画面全体を上下反転 */
+  transition: transform 0.5s ease;
+}
+/* 反転させた中身（子要素）を、さらに反転させて元に戻す */
+.is-inverted > * {
+  transform: scaleY(-1);
+}
+
+/*色反転 (画面全体) */
+.is-color-inverted {
+  filter: invert(100%);
+  
+  background-color: #e6f0f3; /* ◀ #333 から変更 */
+  transition: filter 0.5s ease, background-color 0.5s ease;
+}
