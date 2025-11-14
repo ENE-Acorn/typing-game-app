@@ -11,7 +11,7 @@ import React from 'react';
 interface GameScreenProps {
   gameState: GameState;
   myId: string;
-  onUpdateProgress: (typedText: string, lightLevel: number) => void;
+  onUpdateProgress: (typedText: string, consecutiveCount: number) => void;
   onWordCompleted: (word: string) => void;
   onGameClear: (correctlyType: number, missType: number) => void;
   onReset: () => void;
@@ -22,7 +22,6 @@ export default function GameScreen({ gameState, myId, onUpdateProgress, onWordCo
   const [typedText, setTypedText] = useState('');  //自分が正しく打てた文字数を記録
   const [missType, setMissType] = useState(0);  //自分が何回ミスをしたか記録
   const [correctlyType, setCorrectlyType] = useState(0);
-  const [lightLevel, setLightLevel] = useState(0);
   const hasReportedRef = useRef(false);//報告フラグ(ゲーム終了時のやつ)
   const consecutiveCount = useRef(0)
 
@@ -31,6 +30,10 @@ export default function GameScreen({ gameState, myId, onUpdateProgress, onWordCo
   const opponent = Object.values(gameState.players).find(p => p.id !== myId);
   const currentWordJP = gameState.currentWordJP; // 日本語のお題 (例: "こんにちは")
   const currentWordRomaji = gameState.currentWordRomaji; // ローマ字のお題 (例: "konnichiha")
+
+  const botTypingIntervalRef = useRef<NodeJS.Timeout | null>(null); // setIntervalのID
+  const BOT_TYPING_SPEED_MS = 185; // 0.185秒に1文字
+  const BOT_MISTAKE_CHANCE = 0.025; // 97.5%
 
   //同じお題が出た時にも更新するための処理
   const totalScore = Object.values(gameState.players).reduce((sum, player) => sum + player.score, 0);
@@ -54,27 +57,25 @@ export default function GameScreen({ gameState, myId, onUpdateProgress, onWordCo
   // お題が変わるたびに、自分の入力をリセットする係
   useEffect(() => {
     setTypedText('');
-  }, [totalScore]); // currentWordRomajiが変化した時だけ、この仕事を実行
+    botTypedRef.current = ''; // 次の単語に備えてリセット
+  }, [totalScore]);
 
 
   //0.05秒ごとに、司令塔に進捗を電話報告する係
   useEffect(() => {
-    const interval = setInterval(() => {
-      // ゲームがプレイ中じゃなければ報告しない
-      if (gameState.status !== 'playing') return;
 
-      onUpdateProgress(
-        typedText, lightLevel
-      );
+    // ゲームがプレイ中じゃなければ報告しない
+    if (gameState.status !== 'playing') return;
 
-      if (lightLevel == 5) {
-        setLightLevel(0);
-      }
+    onUpdateProgress(
+      typedText, consecutiveCount.current
+    );
+    if (consecutiveCount.current >= 50) {
+      consecutiveCount.current = 0;
+    }
 
-    }, 50); // 0.05秒ごとに実行
 
-    return () => clearInterval(interval); // この部品が不要になったら、電話をかけ続けるのをやめる
-  }, [typedText, missType, currentWordRomaji, lightLevel, gameState.status, onUpdateProgress]);
+  }, [typedText, missType]);
 
 
   useEffect(() => {
@@ -86,41 +87,109 @@ export default function GameScreen({ gameState, myId, onUpdateProgress, onWordCo
     }
   }, [gameState.status, onGameClear, correctlyType, missType]);
 
-  //キーボードが押されるたびに、瞬時に反応する係
+  const botTypedRef = useRef(''); // ← 永続的にBotのtypedTextを保持
+
   useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      // ゲーム中じゃなかったり、Shiftキーなどの特殊キーが押されたら何もしない
-      if (gameState.status !== 'playing' || !currentWordRomaji || e.key.length > 1) {
+    if (myPlayer?.isBot !== true || gameState.status !== 'playing') {
+      if (botTypingIntervalRef.current) {
+        clearInterval(botTypingIntervalRef.current);
+        botTypingIntervalRef.current = null;
+      }
+      return;
+    }
+
+    if (botTypingIntervalRef.current) {
+      clearInterval(botTypingIntervalRef.current);
+    }
+
+    const targetWord = currentWordRomaji;
+
+    //タイピングを開始
+    botTypingIntervalRef.current = setInterval(() => {
+
+      // ミスする確率処理
+      if (Math.random() < BOT_MISTAKE_CHANCE) {
+        console.log("BOT MISSED");
+        consecutiveCount.current = 0;
+        setMissType(prev => prev + 1);
         return;
       }
 
-      // 次に打つべき文字が、お題のどの文字かを確認
-      const nextCharIndex = typedText.length;
-      if (e.key === currentWordRomaji[nextCharIndex]) {
-        // 【正解！】
-        const newTypedText = typedText + e.key;
-        setTypedText(newTypedText); // 正しく打てた文字を記憶
+      const nextCharIndex = botTypedRef.current.length;
 
+      if (nextCharIndex < targetWord.length) {
+
+        // 1文字進む
+        botTypedRef.current += targetWord[nextCharIndex];
+
+        // 正答カウント
         setCorrectlyType(prev => prev + 1);
 
         consecutiveCount.current++;
 
-        setLightLevel(consecutiveCount.current / 10);
-        if (consecutiveCount.current >= 50) {
-          consecutiveCount.current = 0;
-        }
+        // 表示を更新
+        setTypedText(botTypedRef.current);
 
-        if (newTypedText === currentWordRomaji) {
-          //ワードを打ち切った場合
-          onWordCompleted(currentWordRomaji);//サーバに通信
-        }
       } else {
-        // 【不正解...】
-        consecutiveCount.current = 0;
-        setLightLevel(0);
-        setMissType(prev => prev + 1); // ミスカウンターを1増やす
+        console.log("WORD COMPLETE");
+        onWordCompleted(targetWord);
+        botTypedRef.current = ''; // 次の単語に備えてリセット
+      }
+
+    }, BOT_TYPING_SPEED_MS);
+
+    // クリーンアップ
+    return () => {
+      if (botTypingIntervalRef.current) {
+        clearInterval(botTypingIntervalRef.current);
+        botTypingIntervalRef.current = null;
       }
     };
+
+  }, [
+    myPlayer?.isBot,
+    gameState.status,
+    currentWordRomaji,
+    onWordCompleted,
+    BOT_MISTAKE_CHANCE,
+    BOT_TYPING_SPEED_MS
+  ]);
+
+
+  //キーボードが押されるたびに、瞬時に反応する係
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+
+      if (myPlayer?.isBot === false && gameState.status === 'playing') {
+
+        // ゲーム中じゃなかったり、Shiftキーなどの特殊キーが押されたら何もしない
+        if (gameState.status !== 'playing' || !currentWordRomaji || e.key.length > 1) {
+          return;
+        }
+
+        // 次に打つべき文字が、お題のどの文字かを確認
+        const nextCharIndex = typedText.length;
+        if (e.key === currentWordRomaji[nextCharIndex]) {
+          // 【正解！】
+          const newTypedText = typedText + e.key;
+          console.log("ssss")
+          setTypedText(newTypedText); // 正しく打てた文字を記憶
+
+          setCorrectlyType(prev => prev + 1);
+
+          consecutiveCount.current++;
+
+          if (newTypedText === currentWordRomaji) {
+            //ワードを打ち切った場合
+            onWordCompleted(currentWordRomaji);//サーバに通信
+          }
+        } else {
+          // 【不正解...】
+          consecutiveCount.current = 0;
+          setMissType(prev => prev + 1); // ミスカウンターを1増やす
+        }
+      };
+    }
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);//リスナーを削除
@@ -176,8 +245,8 @@ export default function GameScreen({ gameState, myId, onUpdateProgress, onWordCo
           </div>
 
           <div className="statsContainer">
-            <p className="statText">Correct: {lightLevel}</p>
-            <p className="statText">Miss: {opponent.interferenceType}</p>
+            <p className="statText">Correct: {correctlyType}</p>
+            <p className="statText">Miss: {missType}</p>
           </div>
         </div>
 

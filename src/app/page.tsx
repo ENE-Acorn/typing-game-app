@@ -16,6 +16,7 @@ export interface Player {
   correctlyType: number;
   typedText: string;
   interferenceType: string;
+  isBot: boolean;
 }
 
 // GameStateの設計図
@@ -44,7 +45,7 @@ export default function Home() {
   useEffect(() => {
     // サーバーに接続
 
-    const ws = new WebSocket('ws://172.24.63.84:3000/ws');
+    const ws = new WebSocket('ws://10.33.73.221:3000/ws');
     setSocket(ws);
 
 
@@ -93,12 +94,12 @@ export default function Home() {
   }
 
   //ゲーム中に１００ミリ秒ごとに定期的に送られる進捗などのデータ送信
-  const handleUpdateProgress = (typedText: string,lightLevel: number) => {
+  const handleUpdateProgress = (typedText: string,consecutiveCount: number) => {
     if (socket && socket.readyState === WebSocket.OPEN) {
       socket.send(JSON.stringify({
         type: 'updateProgress',
         typedText: typedText,
-        lightLevel: lightLevel
+        consecutiveCount: consecutiveCount
       }))
     }
   }
@@ -132,6 +133,15 @@ export default function Home() {
     }
   }
 
+  const handleCpuGameStart = (name) => {
+    if (socket && socket.readyState === WebSocket.OPEN) {
+      socket.send(JSON.stringify({
+        type: 'cpuGameStart',
+        name: name
+      }))
+    }
+  }
+
   // gameStateがまだ無い場合はローディング表示
   if (!gameState) {
     return <div>Connecting to server...</div>;
@@ -139,7 +149,7 @@ export default function Home() {
 
   // gameState.statusの値に応じて、表示するコンポーネントを切り替える
   if (gameState.status === 'waiting') {
-    return <StartScreen gameState={gameState} onReady={handlePlayerReady} onNameChange={handleNameChange} myId={myId} />;
+    return <StartScreen gameState={gameState} onReady={handlePlayerReady} onNameChange={handleNameChange} onCpuGameStart={handleCpuGameStart}myId={myId} />;
   }
 
   if (gameState.status === 'countdown') {

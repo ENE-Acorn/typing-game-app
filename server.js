@@ -23,7 +23,7 @@ let gameState = {
     finishTime: 0,
     currentWordJP: '',
     currentWordRomaji: '',
-    winnerPlayerName: ""
+    winnerPlayerName: "",
 };
 const interferenceList = [
     'smallText', // 文字を小さく
@@ -129,20 +129,27 @@ app.prepare().then(() => {
                 progress: 0,
                 score: 0,
                 typedText: "",
-                interferenceType: "null"
+                interferenceType: "null",
+                isBot: false
             };
             console.log(`${playerId} が接続しました。`);
+        } else if(picoClient !== "null"){
+        console.log("Raspberry Pi Picoが接続しました。");
+        picoClient = ws; // Picoの接続を専用変数に保存
         }
+    
 
         // 接続してきた人に、現在のゲーム状況を送信
         broadcastGameState();
 
         //プレイヤーからメッセージが届いた時の処理
         ws.on('message', (message) => {
-            const receivedMessage = JSON.parse(message.toString());
+            const receivedMessage = JSON.parse(message.toString('utf8'));
 
             const player = gameState.players[ws.playerId];
             if (!player) return;
+
+            const opponent = Object.values(gameState.players).find(p => p.id !== player.id);
 
             // メッセージの種類に応じて処理を振り分け
             switch (receivedMessage.type) {
@@ -150,11 +157,6 @@ app.prepare().then(() => {
                 case "ping":
                     // クライアントからのpingに応答する
                     ws.send(JSON.stringify({ type: 'pong' }));
-                    break;
-
-                case "pico_connect":
-                    console.log("Raspberry Pi Picoが接続しました。");
-                    picoClient = ws; // Picoの接続を専用変数に保存
                     break;
 
                 case "playerReady":
@@ -184,17 +186,16 @@ app.prepare().then(() => {
                         picoClient.send(JSON.stringify({
                             type: "progressUpdate",//定期でプレイヤーのライトをどこまで点灯させるか送信
                             playerId: player.id,
-                            lightLevel: receivedMessage.lightLevel
+                            consecutiveCount: receivedMessage.consecutiveCount
+
                         }));
                     }
-                    opponent = Object.values(gameState.players).find(p => p.id !== player.id);
 
-                    if (receivedMessage.lightLevel == 5 && opponent.interferenceType == "null") {
+                    if (receivedMessage.consecutiveCount == 50 && opponent.interferenceType == "null") {
 
                         opponent.interferenceType = interferenceList[Math.floor(Math.random() * interferenceList.length)];
 
                         setTimeout(() => {
-                            opponent = Object.values(gameState.players).find(p => p.id !== player.id);
                             opponent.interferenceType = "null";
                             console.log("妨害終了");
                             broadcastGameState();
@@ -219,7 +220,7 @@ app.prepare().then(() => {
                     }
 
                     winner.score += 1;//スコアを加算
-                    if (winner.score >= 10) {//スコアを10個獲得した時(ゲーム終了)
+                    if (winner.score >= 100) {//スコアを10個獲得した時(ゲーム終了)
                         gameState.finishTime = Date.now();//ゲーム終了時刻
                         gameState.winnerPlayerName = winner.name;//勝者の名前
                         gameState.status = 'finished';//リザルト画面へ移行
@@ -265,6 +266,30 @@ app.prepare().then(() => {
                     broadcastGameState();
                     break;
 
+                case "cpuGameStart":
+
+                    player.name = receivedMessage.name;
+                    player.isReady = true;
+                    player.isBot = false;
+
+
+                    if (opponent) {
+
+                        opponent.name = "CPU";
+                        opponent.isReady = true;
+                        opponent.isBot = true;
+                    } else {
+                        console.log("相手がいません");
+                        player.isReady = false;
+                        broadcastGameState();
+                        return;
+                    }
+                    gameState.status = 'countdown';//まずはカウントダウン
+                    gameState.countdown = 3;
+                    gameStart();
+
+                    broadcastGameState();
+                    break;
             }
         });
 

@@ -8,9 +8,10 @@ interface StartScreenProps {
     myId: string
     onReady: (name: string) => void;
     onNameChange: (name: string) => void;
+    onCpuGameStart: (name: string) => void;
 }
 
-export default function StartScreen({ gameState, myId, onReady, onNameChange, }: StartScreenProps) {
+export default function StartScreen({ gameState, myId, onReady, onNameChange, onCpuGameStart }: StartScreenProps) {
     const [myName, setMyName] = useState<string>('');
 
     let myPlayerInfo: Player | undefined;//ここで、もしプレイヤーがいなくても初期値が入るようにする
@@ -31,7 +32,7 @@ export default function StartScreen({ gameState, myId, onReady, onNameChange, }:
         // このコンポーネントが非表示になるとき
         return () => {
             // bodyタグのmarginを元に戻す（他の画面に影響しないように）
-            document.body.style.margin = ''; 
+            document.body.style.margin = '';
         };
     }, []);
     useEffect(() => {
@@ -56,8 +57,14 @@ export default function StartScreen({ gameState, myId, onReady, onNameChange, }:
         };
     }, [myName, onReady]);//依存関係
 
+    const handleCpuGameStart = () => {
+        if (myName.trim()) {
+            onCpuGameStart(myName.trim())
+        }
+    }
+
     return (
-        <main style={{ padding: '20px', width: '100%',backgroundColor: '#d8e8ed',minHeight:'100vh',boxSizing:'border-box'}}>
+        <main style={{ padding: '20px', width: '100%', backgroundColor: '#d8e8ed', minHeight: '100vh', boxSizing: 'border-box' }}>
             <h1>すたあとがめん</h1>
             <p>スペースキーを押して準備を完了する</p>
 
@@ -75,7 +82,7 @@ export default function StartScreen({ gameState, myId, onReady, onNameChange, }:
                     border: '1px solid #ccc',
                     padding: '15px',
                     borderRadius: '8px',
-                    backgroundColor:'white'
+                    backgroundColor: 'white'
                 }}>
                     <h2>自分の名前</h2>
                     <div style={{ minHeight: '50px', marginBottom: '10px' }}>
@@ -105,7 +112,7 @@ export default function StartScreen({ gameState, myId, onReady, onNameChange, }:
                     border: '1px solid #ccc',
                     padding: '15px',
                     borderRadius: '8px',
-                    backgroundColor:'white'
+                    backgroundColor: 'white'
                 }}>
                     <h2>相手の名前</h2>
                     <div style={{ minHeight: '50px', marginBottom: '10px' }}>
@@ -124,6 +131,13 @@ export default function StartScreen({ gameState, myId, onReady, onNameChange, }:
                     )}
                 </div>
             </div>
+            <button
+                onClick={handleCpuGameStart}
+                disabled={myPlayerInfo?.isReady || !myName.trim()} // 準備完了押してたら押せない
+                style={{ backgroundColor: '#34495E', color: '#ffffff' }} // 色を変える
+            >
+                CPUと対戦
+            </button>
         </main>
     );
 }
