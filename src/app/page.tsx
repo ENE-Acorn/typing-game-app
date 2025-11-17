@@ -64,12 +64,16 @@ export default function Home() {
       }
     };
     // 接続維持のためのハートビート（30秒ごとにpingを送信）
-    const heartbeatInterval = setInterval(() => {
+    setInterval(() => {
       if (ws.readyState === WebSocket.OPEN) {
-        ws.send(JSON.stringify({ type: 'ping' }));
+        ws.send(JSON.stringify({
+          type: 'ping',
+        }));
       }
+
     }, 30000); // 30秒ごと
-  }, []);
+  }
+    , []);
 
 
   //プレイヤーの名前が変わった場合の通信
@@ -93,8 +97,18 @@ export default function Home() {
     }
   }
 
+  const handleReadyCansel = (name: string) => {
+    if (socket && socket.readyState === WebSocket.OPEN) {
+      socket.send(JSON.stringify({
+        type: 'readyCansel',
+        name: name
+      }))
+    }
+  }
+
+
   //ゲーム中に１００ミリ秒ごとに定期的に送られる進捗などのデータ送信
-  const handleUpdateProgress = (typedText: string,consecutiveCount: number) => {
+  const handleUpdateProgress = (typedText: string, consecutiveCount: number) => {
     if (socket && socket.readyState === WebSocket.OPEN) {
       socket.send(JSON.stringify({
         type: 'updateProgress',
@@ -124,7 +138,7 @@ export default function Home() {
       }))
     }
   }
-  
+
   const handleOnReset = () => {
     if (socket && socket.readyState === WebSocket.OPEN) {
       socket.send(JSON.stringify({
@@ -149,7 +163,7 @@ export default function Home() {
 
   // gameState.statusの値に応じて、表示するコンポーネントを切り替える
   if (gameState.status === 'waiting') {
-    return <StartScreen gameState={gameState} onReady={handlePlayerReady} onNameChange={handleNameChange} onCpuGameStart={handleCpuGameStart}myId={myId} />;
+    return <StartScreen gameState={gameState} onReady={handlePlayerReady} onNameChange={handleNameChange} onCpuGameStart={handleCpuGameStart} onReadyCansel={handleReadyCansel} myId={myId} />;
   }
 
   if (gameState.status === 'countdown') {

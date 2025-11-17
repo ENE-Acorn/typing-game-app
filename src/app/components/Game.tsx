@@ -206,7 +206,7 @@ export default function GameScreen({ gameState, myId, onUpdateProgress, onWordCo
       if (index < render.length) {
         color = '#46b963ff'; // 正しく入力された文字は白
       }
-      return <span key={index} style={{ color, fontSize: '3rem', margin: '0 2px' }}>{char}</span>;
+      return <span key={index} style={{ color, fontSize: '2.5rem', margin: '0 2px' }}>{char}</span>;
     });
   };
 
@@ -226,8 +226,34 @@ export default function GameScreen({ gameState, myId, onUpdateProgress, onWordCo
     ${myInterference === 'invert' ? 'is-inverted' : ''}
   `;
 
+  const TARGET_SCORE_TO_WIN = 10;
+
+  const myProgressPercent = Math.min((myPlayer?.score || 0) / TARGET_SCORE_TO_WIN, 1) * 50;
+  const opponentProgressPercent = Math.min((opponent?.score || 0) / TARGET_SCORE_TO_WIN, 1) * 50;
+
   return (
     <main className={mainContainerClasses}>
+
+      <button className="back-button" onClick={handleOnReset}>
+        ゲームをキャンセル
+      </button>
+
+      <div className="goal-progress-bar-container">
+        <div className="goal-text">GOAL</div>
+        <div className="goal-progress-bar">
+          <div
+            id="my-progress"
+            className="player-progress-bar"
+            style={{ width: `${myProgressPercent}%` }}
+          ></div>
+          <div className="goal-marker"></div>
+          <div
+            id="opponent-progress"
+            className="player-progress-bar"
+            style={{ width: `${opponentProgressPercent}%` }}
+          ></div>
+        </div>
+      </div>
 
       <div className="questionWord">
         {currentWordJP}
@@ -245,26 +271,45 @@ export default function GameScreen({ gameState, myId, onUpdateProgress, onWordCo
           </div>
 
           <div className="statsContainer">
-            <p className="statText">Correct: {correctlyType}</p>
-            <p className="statText">Miss: {missType}</p>
+            <p className="statText">正解数: {correctlyType}</p>
+            <p className="statText">ミス数: {missType}</p>
           </div>
         </div>
 
         {/* 相手のエリア */}
-        <div className="playerBox opponentPlayerBox">
+        <div
+          className="playerBox opponentPlayerBox" // ★ クラスは元のまま
+          style={{ position: 'relative' }}      // 妨害マークの基準点
+        >
+
+          {/* ★ 妨害マーク (div の "内側" に配置) */}
+          {opponent.interferenceType !== "null" && (
+            <span style={{
+              position: 'absolute', // 親要素を基準に絶対配置
+              top: '15px',          // 親要素の上から15px
+              left: '15px',         // 親要素の左から15px
+              fontSize: '1.8rem',     // お好みのサイズに調整
+              color: '#dc3545',      // 妨害マークの色（赤）
+              zIndex: 10
+            }}
+            >
+              ⚠️妨害中⚠️
+            </span>
+          )}
+
+          {/* ★ 以下の要素もすべて div の "内側" に配置 */}
           <div className="playerName">{opponent?.name || 'OPPONENT'}</div>
           <div className="playerScore">{opponent?.score || 0}</div>
           <div className="typingArea">
             {opponent ? renderWord(opponent.typedText) : <span style={{ color: '#a0a0a0' }}>...</span>}
           </div>
+          {myInterference === 'smoke' && (
+            <div className="smoke-overlay">
+              <p>妨害発動中！</p>
+            </div>
+          )}
         </div>
-
       </div>
-      {myInterference === 'smoke' && (
-        <div className="smoke-overlay">
-          <p>妨害発動中！</p>
-        </div>
-      )}
     </main>
-  );
+  )
 }

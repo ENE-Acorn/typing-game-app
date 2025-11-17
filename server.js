@@ -3,6 +3,7 @@ const { parse } = require('url');
 const next = require('next');
 const { WebSocketServer } = require('ws');
 const fs = require('fs');
+const { a } = require('framer-motion/client');
 
 const dev = process.env.NODE_ENV !== 'production';
 const app = next({ dev });
@@ -124,7 +125,7 @@ app.prepare().then(() => {
         if (Object.keys(gameState.players).length < 2) {
             gameState.players[playerId] = {
                 id: playerId,
-                name: 'unknownさん',
+                name: '名無しさん',
                 isReady: false,
                 progress: 0,
                 score: 0,
@@ -133,11 +134,11 @@ app.prepare().then(() => {
                 isBot: false
             };
             console.log(`${playerId} が接続しました。`);
-        } else if(picoClient !== "null"){
-        console.log("Raspberry Pi Picoが接続しました。");
-        picoClient = ws; // Picoの接続を専用変数に保存
+        } else if (picoClient !== "null") {
+            console.log("Raspberry Pi Picoが接続しました。");
+            picoClient = ws; // Picoの接続を専用変数に保存
         }
-    
+
 
         // 接続してきた人に、現在のゲーム状況を送信
         broadcastGameState();
@@ -156,7 +157,19 @@ app.prepare().then(() => {
 
                 case "ping":
                     // クライアントからのpingに応答する
-                    ws.send(JSON.stringify({ type: 'pong' }));
+                    ws.send(JSON.stringify({ type: 'ping' }));
+                    console.log("pcからpingを受信")
+                    for (const client of clients) {
+                        if (client.readyState === 1) {
+                            client.send(JSON.stringify({
+                                type: "Pong",
+                            }));
+                        }
+                    }
+                    break;
+
+                case "picoping":
+                    console.log("Picoからpingを受信");
                     break;
 
                 case "playerReady":
@@ -171,6 +184,19 @@ app.prepare().then(() => {
                         // 状態が変わったので、全員の準備がOKかチェック
                         checkIfBothPlayersAreReady();
                     }
+                    break;
+
+                case "readyCansel":
+                    //送信元のプレイヤーのisReadyをfalseにする
+                    broadcastGameState();
+                    if (gameState.players[ws.playerId]) {
+                        gameState.players[ws.playerId].isReady = false;
+                        gameState.players[ws.playerId].name = receivedMessage.name;
+                        console.log(`${ws.playerId} の準備完了が取り消されました。`);
+
+                        broadcastGameState();
+                    }
+
                     break;
                 case "updateName"://プレイヤーの名前が変わった時
                     if (gameState.players[ws.playerId]) {
@@ -195,6 +221,7 @@ app.prepare().then(() => {
 
                         opponent.interferenceType = interferenceList[Math.floor(Math.random() * interferenceList.length)];
 
+                        console.log(opponent.interferenceType + "が発生中");
                         setTimeout(() => {
                             opponent.interferenceType = "null";
                             console.log("妨害終了");
@@ -212,7 +239,7 @@ app.prepare().then(() => {
                     }//先に接続してきたプレイヤーをそのセットの勝者とする
                     const winner = player;
 
-                    console.log(`${winner.name}がラウンド勝利！`);
+                    console.log(`${winner.name}が１ワード先取！`);
 
                     for (const pId in gameState.players) {
                         const p = gameState.players[pId];
@@ -220,7 +247,7 @@ app.prepare().then(() => {
                     }
 
                     winner.score += 1;//スコアを加算
-                    if (winner.score >= 100) {//スコアを10個獲得した時(ゲーム終了)
+                    if (winner.score >= 10) {//スコアを10個獲得した時(ゲーム終了)
                         gameState.finishTime = Date.now();//ゲーム終了時刻
                         gameState.winnerPlayerName = winner.name;//勝者の名前
                         gameState.status = 'finished';//リザルト画面へ移行
@@ -234,6 +261,7 @@ app.prepare().then(() => {
                     break;
 
                 case "gameClear"://ゲーム終了時にプレイヤーの成績をサーバに送信してきた時の処理
+                    console.log("ゲームクリアが実行されました")
                     player.correctlyType = receivedMessage.correctlyType;
                     player.missType = receivedMessage.missType;
 
@@ -245,7 +273,9 @@ app.prepare().then(() => {
 
                     broadcastGameState();
                     break;
+
                 case "gameReset":
+                    console.log("ゲームリセットが実行されました")
                     for (const playerId in gameState.players) {//ゲームに関係する値を初期化
                         const player = gameState.players[playerId];
 
@@ -255,11 +285,18 @@ app.prepare().then(() => {
                         player.name = "";
                         player.isReady = false;
                         player.typedText = "";
+                        player.isBot = false;
                     }
                     gameState.startTime = 0,
                         gameState.finishTime = 0,
                         gameState.winnerPlayerName = "";
                     gameState.countdown = 3;
+
+                    if (picoClient && picoClient.readyState === 1) { // 1はWebSocket.OPENの意味
+                        picoClient.send(JSON.stringify({
+                            type: "gameClear",//ゲームが終わった時にライトを消灯させる処理
+                        }));
+                    }
 
                     gameState.status = "waiting";
 
@@ -272,7 +309,6 @@ app.prepare().then(() => {
                     player.isReady = true;
                     player.isBot = false;
 
-
                     if (opponent) {
 
                         opponent.name = "CPU";
@@ -284,6 +320,8 @@ app.prepare().then(() => {
                         broadcastGameState();
                         return;
                     }
+                    console.log("BOT戦スタート")
+
                     gameState.status = 'countdown';//まずはカウントダウン
                     gameState.countdown = 3;
                     gameStart();

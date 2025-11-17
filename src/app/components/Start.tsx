@@ -9,9 +9,10 @@ interface StartScreenProps {
     onReady: (name: string) => void;
     onNameChange: (name: string) => void;
     onCpuGameStart: (name: string) => void;
+    onReadyCansel: (name: string) => void;
 }
 
-export default function StartScreen({ gameState, myId, onReady, onNameChange, onCpuGameStart }: StartScreenProps) {
+export default function StartScreen({ gameState, myId, onReady, onNameChange, onCpuGameStart, onReadyCansel }: StartScreenProps) {
     const [myName, setMyName] = useState<string>('');
 
     let myPlayerInfo: Player | undefined;//ここで、もしプレイヤーがいなくても初期値が入るようにする
@@ -62,6 +63,11 @@ export default function StartScreen({ gameState, myId, onReady, onNameChange, on
             onCpuGameStart(myName.trim())
         }
     }
+    const handleReadyCansel = () => {
+        onReadyCansel(myName)
+    }
+
+
 
     return (
         <main style={{ padding: '20px', width: '100%', backgroundColor: '#d8e8ed', minHeight: '100vh', boxSizing: 'border-box' }}>
@@ -71,36 +77,39 @@ export default function StartScreen({ gameState, myId, onReady, onNameChange, on
             {/* Flexコンテナで左右に分割 */}
             <div style={{
                 display: 'flex',
-                justifyContent: 'space-around', // 左右に均等配置
-                gap: '20px', // 左右のセクション間の隙間
-                marginTop: '20px'
+                justifyContent: 'center', // ← 'space-between' から変更
+                gap: '80px', // ← カード間の隙間を 40px に固定（お好みで調整）
+                width: '100%',
+                margin: '20px auto 0 auto'
             }}>
 
                 {/* 左側：自分の情報 */}
                 <div style={{
-                    flex: 1, // 利用可能なスペースを均等に占める
-                    border: '1px solid #ccc',
-                    padding: '15px',
+                    width: '500px',
+                    border: '2px solid #3b82f6',
+                    padding: '25px',
                     borderRadius: '8px',
-                    backgroundColor: 'white'
+                    backgroundColor: 'white',
+                    boxSizing: 'border-box'
                 }}>
-                    <h2>自分の名前</h2>
+                    <h2 style={{ fontSize: '2.5rem', marginTop: '0', marginBottom: '15px' }}>自分の名前</h2>
                     <div style={{ minHeight: '50px', marginBottom: '10px' }}>
                         <input
                             type="text"
                             value={myName}
                             onChange={(e) => { setMyName(e.target.value); onNameChange(e.target.value); }}
+                            maxLength={17}
                             disabled={myPlayerInfo?.isReady}
-                            style={{ width: '90%', padding: '8px' }} // inputのスタイル調整
+                            style={{ width: '94%', padding: '12px', fontSize: '1.5rem' }} // inputのスタイル調整
                         />
                     </div>
 
                     {myPlayerInfo?.isReady ? (
-                        <p style={{ backgroundColor: '#4caf50', color: 'white', padding: '10px', borderRadius: '5px' }}>
+                        <p style={{ backgroundColor: '#4caf50', color: 'white', padding: '12px', borderRadius: '5px', fontSize: '1.1rem' }}>
                             準備完了！
                         </p>
                     ) : (
-                        <p style={{ backgroundColor: '#f44336', color: 'white', padding: '10px', borderRadius: '5px' }}>
+                        <p style={{ backgroundColor: '#f44336', color: 'white', padding: '12px', borderRadius: '5px', fontSize: '1.1rem' }}>
                             待機中...
                         </p>
                     )}
@@ -108,24 +117,25 @@ export default function StartScreen({ gameState, myId, onReady, onNameChange, on
 
                 {/* 右側：相手の情報 */}
                 <div style={{
-                    flex: 1, // 利用可能なスペースを均等に占める
-                    border: '1px solid #ccc',
-                    padding: '15px',
+                    width: '500px',
+                    border: '2px solid #f87171',
+                    padding: '25px',
                     borderRadius: '8px',
-                    backgroundColor: 'white'
+                    backgroundColor: 'white',
+                    boxSizing: 'border-box'
                 }}>
-                    <h2>相手の名前</h2>
+                    <h2 style={{ fontSize: '2.5rem', marginTop: '0', marginBottom: '15px' }}>相手の名前</h2>
                     <div style={{ minHeight: '50px', marginBottom: '10px' }}>
-                        <p style={{ fontSize: '1.2em', fontWeight: 'bold' }}>
+                        <p style={{ fontSize: '1.5rem', fontWeight: 'bold' }}>
                             {opponentInfo?.name || '???'}
                         </p>
                     </div>
                     {opponentInfo?.isReady ? (
-                        <p style={{ backgroundColor: '#4caf50', color: 'white', padding: '10px', borderRadius: '5px' }}>
+                        <p style={{ backgroundColor: '#4caf50', color: 'white', padding: '12px', borderRadius: '5px', fontSize: '1.1rem' }}>
                             準備完了！
                         </p>
                     ) : (
-                        <p style={{ backgroundColor: '#f44336', color: 'white', padding: '10px', borderRadius: '5px' }}>
+                        <p style={{ backgroundColor: '#f44336', color: 'white', padding: '12px', borderRadius: '5px', fontSize: '1.1rem' }}>
                             待機中...
                         </p>
                     )}
@@ -133,10 +143,16 @@ export default function StartScreen({ gameState, myId, onReady, onNameChange, on
             </div>
             <button
                 onClick={handleCpuGameStart}
-                disabled={myPlayerInfo?.isReady || !myName.trim()} // 準備完了押してたら押せない
                 style={{ backgroundColor: '#34495E', color: '#ffffff' }} // 色を変える
             >
                 CPUと対戦
+            </button>
+            <br /><br />
+            <button
+                onClick={handleReadyCansel}
+                style={{ backgroundColor: '#34495E', color: '#ffffff' }} // 色を変える
+            >
+                準備完了を取り消す
             </button>
         </main>
     );

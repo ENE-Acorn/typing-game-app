@@ -1,6 +1,6 @@
 [
   { "jp": "後ろから見てるよ", "romaji": "usirokaramiteruyo" },
-  { "jp": "シュリンプは海老のこと", "romaji": "shurinpuhaebinokoto" },
+  { "jp": "シュリンプは海老のこと", "romaji": "syurinpuhaebinokoto" },
   { "jp": "30分遅刻してもいいよ", "romaji": "30puntikokusitemoiiyo" },
   { "jp": "CSS完全に理解した", "romaji": "csskanzennirikaisita" },
   { "jp": "バグじゃない、仕様です", "romaji": "bagujanai,siyoudesu" },
@@ -39,7 +39,7 @@
   { "jp": "材料の買い出しに行く", "romaji": "zairyounokaidasiniiku" },
   { "jp": "三徹すれば余裕", "romaji": "santetusurebayoyuu" },
   { "jp": "追い出したらしいですよ", "romaji": "oidasitarasiidesuyo" },
-  { "jp": "Gitのコンフリクトを解消", "romaji": "gitnokonfurikutowokaisyou" },
+  { "jp": "Gitのコンフリクトを解消", "romaji": "gitnokonhurikutowokaisyou" },
   { "jp": "打ち上げは焼肉", "romaji": "utiagehayakiniku" },
   { "jp": "サーバーの構築が終わった", "romaji": "sa-ba-nokoutikugaowatta" },
   { "jp": "環境構築から始めます", "romaji": "kankyoukoutikukarahazimemasu" },
@@ -53,5 +53,8 @@
   { "jp": "デジタルパンフレット", "romaji": "dezitarupanhuretto" },
   { "jp": "さざなみハッカソン展示", "romaji": "sazanamihakkasontenzi" },
   { "jp": "デジタルキーホルダー", "romaji": "dezitaruki-horuda-" },
-  { "jp": "スタンプラリー", "romaji": "sutanpurari-" }
+  { "jp": "スタンプラリー", "romaji": "sutanpurari-" },
+  { "jp": "腰を痛めた", "romaji": "kosiwoitameta" },
+  { "jp": "カラオケに行きたい", "romaji": "karaokeniikitai" },
+  { "jp": "8時間睡眠", "romaji": "8zikanosuimin" }
 ]
