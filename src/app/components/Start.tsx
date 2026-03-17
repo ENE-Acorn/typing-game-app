@@ -59,6 +59,10 @@ export default function StartScreen({ gameState, myId, onReady, onNameChange, on
     }, [myName, onReady]);//依存関係
 
     const handleCpuGameStart = () => {
+        if(myName === "") {
+            alert("名前を入力してください")//名前の入力を必須に
+            return;
+        }
         if (myName.trim()) {
             onCpuGameStart(myName.trim())
         }

@@ -4,7 +4,8 @@
   align-items: center;
   background-color: #e6f0f6;
   min-height: 100vh;
-  padding: 2rem;
+  padding: 1rem 2rem 2rem; /* 上の余白を小さくして全体を上寄せ */
+  justify-content: flex-start; /* 上に配置する */
   text-align: center;
 }
 

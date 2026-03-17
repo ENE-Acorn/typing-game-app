@@ -42,11 +42,14 @@ export default function GameScreen({ gameState, myId, onUpdateProgress, onWordCo
     // このコンポーネント（StartScreen）が表示されたら
     // bodyタグのmarginを強制的に0にする
     document.body.style.margin = '0';
+    // 表示中はスクロールバーが出ないようにする
+    document.body.style.overflow = 'hidden';
 
     // このコンポーネントが非表示になるとき
     return () => {
       // bodyタグのmarginを元に戻す（他の画面に影響しないように）
       document.body.style.margin = '';
+      document.body.style.overflow = '';
     };
   }, []);
 
