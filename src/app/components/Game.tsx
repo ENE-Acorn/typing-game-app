@@ -51,7 +51,7 @@ export default function GameScreen({ gameState, myId, onUpdateProgress, onWordCo
     BOT_TYPING_SPEED_MS = 170; // 0.17秒に1文字
     BOT_MISTAKE_CHANCE = 0.01;
   } else if (difficulty === "extra") {
-    BOT_TYPING_SPEED_MS = 100; // 0.15秒に1文字
+    BOT_TYPING_SPEED_MS = 80; // 0.08秒に1文字
     BOT_MISTAKE_CHANCE = 0.005;
   }
   //同じお題が出た時にも更新するための処理
