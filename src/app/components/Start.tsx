@@ -10,10 +10,14 @@ interface StartScreenProps {
     onNameChange: (name: string) => void;
     onCpuGameStart: (name: string) => void;
     onReadyCansel: (name: string) => void;
+    onRightPlayer: () => void;
+    onLeftPlayer: () => void;
 }
 
-export default function StartScreen({ gameState, myId, onReady, onNameChange, onCpuGameStart, onReadyCansel }: StartScreenProps) {
+export default function StartScreen({ gameState, myId, onReady, onNameChange, onCpuGameStart, onReadyCansel, onRightPlayer, onLeftPlayer }: StartScreenProps) {
     const [myName, setMyName] = useState<string>('');
+    const [seat, setSeat] = useState<'left' | 'right' | null>(null);
+    const [readyLocal, setReadyLocal] = useState<boolean>(false); // ローカルで準備状態を保持
 
     let myPlayerInfo: Player | undefined;//ここで、もしプレイヤーがいなくても初期値が入るようにする
     let opponentInfo: Player | undefined;//同上
@@ -41,13 +45,23 @@ export default function StartScreen({ gameState, myId, onReady, onNameChange, on
         // eventの型を KeyboardEvent と明記する
         const handleKeyDown = (event: KeyboardEvent) => {
             if (event.code === 'Space') {
-                event.preventDefault();
-                if (myName != "") {
-                    onReady(myName)//準備完了にして自分の名前を登録
-                } else {
-                    alert("名前を入力してください")//名前の入力を必須に
+                    event.preventDefault();
+                    if (!seat) {
+                        alert('座っている方向を選択してください');
+                        return;
+                    }
+                    // 相手と同じ席を選んでいないかチェック
+                    if (opponentInfo?.seat === seat) {
+                        alert('相手と同じ席が選択されています。別の席を選んでください。');
+                        return;
+                    }
+                    if (myName != "") {
+                        setReadyLocal(true); // 先にローカルで無効化
+                        onReady(myName)//準備完了にして自分の名前を登録
+                    } else {
+                        alert("名前を入力してください")//名前の入力を必須に
+                    }
                 }
-            }
         };
 
         window.addEventListener('keydown', handleKeyDown);
@@ -56,27 +70,85 @@ export default function StartScreen({ gameState, myId, onReady, onNameChange, on
             window.removeEventListener('keydown', handleKeyDown);
             console.log('イベントリスナーを解除しました。');
         };
-    }, [myName, onReady]);//依存関係
+    }, [myName, onReady, seat]);//依存関係
 
     const handleCpuGameStart = () => {
-        if(myName === "") {
+        if (myName === "") {
             alert("名前を入力してください")//名前の入力を必須に
             return;
         }
         if (myName.trim()) {
+            setReadyLocal(true);
             onCpuGameStart(myName.trim())
         }
     }
     const handleReadyCansel = () => {
+        setReadyLocal(false);
         onReadyCansel(myName)
     }
 
+    const handleRightPlayer = () => {
+        if (readyLocal || myPlayerInfo?.isReady) return; // 準備済みなら無効
+        setSeat('right');
+        onRightPlayer();
+    }
 
+    const handleLeftPlayer = () => {
+        if (readyLocal || myPlayerInfo?.isReady) return; // 準備済みなら無効
+        setSeat('left');
+        onLeftPlayer();
+    }
+
+    // サーバ側の isReady とローカル状態を同期
+    useEffect(() => {
+        setReadyLocal(!!myPlayerInfo?.isReady);
+    }, [myPlayerInfo?.isReady]);
 
     return (
-        <main style={{ padding: '20px', width: '100%', backgroundColor: '#d8e8ed', minHeight: '100vh', boxSizing: 'border-box' }}>
+        <main style={{ position: 'relative', padding: '20px', width: '100%', backgroundColor: '#d8e8ed', minHeight: '100vh', boxSizing: 'border-box' }}>
             <h1>すたあとがめん</h1>
-            <p>スペースキーを押して準備を完了する</p>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginTop: '8px' }}>
+                <p style={{ margin: 0 }}>スペースキーを押して準備を完了する</p>
+            </div>
+
+            {/* 上部中央に座席選択ラベル（上）とボタン群（下） */}
+            <div style={{ position: 'absolute', top: '12px', left: '50%', transform: 'translateX(-50%)', zIndex: 70, background: 'transparent', padding: '6px 10px', borderRadius: '8px' }}>
+                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px' }}>
+                    <p style={{ margin: 0, fontSize: '1.15rem', fontWeight: 600, color: '#0f172a' }}>座っている方向を選択</p>
+                    <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
+                        <button
+                            onClick={handleLeftPlayer}
+                            disabled={readyLocal || !!myPlayerInfo?.isReady}
+                            style={{
+                                backgroundColor: seat === 'left' ? '#14532d' : '#f59e0b',
+                                color: '#ffffff',
+                                padding: '12px 18px',
+                                fontSize: '1.05rem',
+                                borderRadius: '8px',
+                                border: 'none',
+                                boxShadow: seat === 'left' ? '0 6px 14px rgba(20,83,45,0.25)' : 'none'
+                            }}
+                        >
+                            左
+                        </button>
+                        <button
+                            onClick={handleRightPlayer}
+                            disabled={readyLocal || !!myPlayerInfo?.isReady}
+                            style={{
+                                backgroundColor: seat === 'right' ? '#14532d' : '#16a34a',
+                                color: '#ffffff',
+                                padding: '12px 18px',
+                                fontSize: '1.05rem',
+                                borderRadius: '8px',
+                                border: 'none',
+                                boxShadow: seat === 'right' ? '0 6px 14px rgba(20,83,45,0.25)' : 'none'
+                            }}
+                        >
+                            右
+                        </button>
+                    </div>
+                </div>
+            </div>
 
             {/* Flexコンテナで左右に分割 */}
             <div style={{

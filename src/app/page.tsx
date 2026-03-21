@@ -17,6 +17,7 @@ export interface Player {
   typedText: string;
   interferenceType: string;
   isBot: boolean;
+  seat: 'left' | 'right' | null;
 }
 
 // GameStateの設計図
@@ -155,15 +156,34 @@ export default function Home() {
       }))
     }
   }
+  
+  const handleRightPlayer = () => {
+    if (socket && socket.readyState === WebSocket.OPEN) {
+      socket.send(JSON.stringify({
+        type: 'rightPlayer',
+      }))
+    }
+  }
 
-  // gameStateがまだ無い場合はローディング表示
-  if (!gameState) {
-    return <div>Connecting to server...</div>;
+  const handleLeftPlayer = () => {
+    if (socket && socket.readyState === WebSocket.OPEN) {
+      socket.send(JSON.stringify({
+        type: 'leftPlayer',
+      }))
+    }
   }
 
   // gameState.statusの値に応じて、表示するコンポーネントを切り替える
+  if (!gameState) {
+    return (
+      <main style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh' }}>
+        <p>ロード中…</p>
+      </main>
+    );
+  }
+
   if (gameState.status === 'waiting') {
-    return <StartScreen gameState={gameState} onReady={handlePlayerReady} onNameChange={handleNameChange} onCpuGameStart={handleCpuGameStart} onReadyCansel={handleReadyCansel} myId={myId} />;
+    return <StartScreen gameState={gameState} onReady={handlePlayerReady} onNameChange={handleNameChange} onCpuGameStart={handleCpuGameStart} onReadyCansel={handleReadyCansel} onRightPlayer={handleRightPlayer} onLeftPlayer={handleLeftPlayer} myId={myId} />;
   }
 
   if (gameState.status === 'countdown') {

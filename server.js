@@ -131,7 +131,8 @@ app.prepare().then(() => {
                 score: 0,
                 typedText: "",
                 interferenceType: "null",
-                isBot: false
+                isBot: false,
+                seat : null
             };
             console.log(`${playerId} が接続しました。`);
         } else if (picoClient !== "null") {
@@ -204,6 +205,20 @@ app.prepare().then(() => {
                         broadcastGameState();
                     }
                     break;
+
+                case "rightPlayer"://pcを正面に見て右側にいるプレイヤーがこのメッセージを送ってきた時
+                    if (gameState.players[ws.playerId]) {
+                        gameState.players[ws.playerId].seat = "right";
+                        broadcastGameState();
+                    }
+                    break;
+
+                case "leftPlayer"://pcを正面に見て左側にいるプレイヤーがこのメッセージを送ってきた時
+                    if (gameState.players[ws.playerId]) {
+                        gameState.players[ws.playerId].seat = "left";
+                        broadcastGameState();
+                    }
+                    break;
                 case "updateProgress"://ゲーム中のどこまで打ったか定期で更新
 
                     player.typedText = receivedMessage.typedText;
@@ -211,7 +226,7 @@ app.prepare().then(() => {
                     if (picoClient && picoClient.readyState === 1) { // 1はWebSocket.OPENの意味
                         picoClient.send(JSON.stringify({
                             type: "progressUpdate",//定期でプレイヤーのライトをどこまで点灯させるか送信
-                            playerId: player.id,
+                            seat: player.seat,
                             consecutiveCount: receivedMessage.consecutiveCount
 
                         }));
@@ -314,6 +329,11 @@ app.prepare().then(() => {
                         opponent.name = "CPU";
                         opponent.isReady = true;
                         opponent.isBot = true;
+                        if(player.seat == "right"){
+                            opponent.seat = "left";
+                        } else if(player.seat == "left"){
+                            opponent.seat = "right";
+                        }
                     } else {
                         console.log("相手がいません");
                         player.isReady = false;
