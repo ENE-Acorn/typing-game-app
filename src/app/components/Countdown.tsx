@@ -1,5 +1,6 @@
 import type { GameState } from '../page'
 import { motion } from 'framer-motion';//アニメーションのため
+import { useEffect } from 'react';
 
 // propsの型を定義
 interface CountdownScreenProps {
@@ -7,6 +8,16 @@ interface CountdownScreenProps {
 }
 //gameState.countdownが3,2,1と自動で減っていくのでそれに応じて表示
 export default function CountdownScreen({ gameState }: CountdownScreenProps) {
+
+  useEffect(() => {
+    // カウントダウン表示中はスクロールを抑制
+    document.body.style.overflow = 'hidden';
+    document.body.style.margin = '0';
+    return () => {
+      document.body.style.overflow = '';
+      document.body.style.margin = '';
+    };
+  }, []);
 
   const countdown = gameState?.countdown;
 

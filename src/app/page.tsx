@@ -16,6 +16,8 @@ export interface Player {
   correctlyType: number;
   typedText: string;
   interferenceType: string;
+  isBot: boolean;
+  seat: 'left' | 'right' | null;
 }
 
 // GameStateの設計図
@@ -31,6 +33,7 @@ export interface GameState {
   currentWordJP: '',
   currentWordRomaji: '',
   winnerPlayerName: ""
+  difficulty: 'easy' | 'normal' | 'hard' | 'extra';
 }
 
 export default function Home() {
@@ -44,7 +47,7 @@ export default function Home() {
   useEffect(() => {
     // サーバーに接続
 
-    const ws = new WebSocket('ws://172.24.63.84:3000/ws');
+    const ws = new WebSocket('ws://192.168.137.117:3000/ws');
     setSocket(ws);
 
 
@@ -63,12 +66,16 @@ export default function Home() {
       }
     };
     // 接続維持のためのハートビート（30秒ごとにpingを送信）
-    const heartbeatInterval = setInterval(() => {
+    setInterval(() => {
       if (ws.readyState === WebSocket.OPEN) {
-        ws.send(JSON.stringify({ type: 'ping' }));
+        ws.send(JSON.stringify({
+          type: 'ping',
+        }));
       }
+
     }, 30000); // 30秒ごと
-  }, []);
+  }
+    , []);
 
 
   //プレイヤーの名前が変わった場合の通信
@@ -92,13 +99,23 @@ export default function Home() {
     }
   }
 
+  const handleReadyCansel = (name: string) => {
+    if (socket && socket.readyState === WebSocket.OPEN) {
+      socket.send(JSON.stringify({
+        type: 'readyCansel',
+        name: name
+      }))
+    }
+  }
+
+
   //ゲーム中に１００ミリ秒ごとに定期的に送られる進捗などのデータ送信
-  const handleUpdateProgress = (typedText: string,lightLevel: number) => {
+  const handleUpdateProgress = (typedText: string, consecutiveCount: number) => {
     if (socket && socket.readyState === WebSocket.OPEN) {
       socket.send(JSON.stringify({
         type: 'updateProgress',
         typedText: typedText,
-        lightLevel: lightLevel
+        consecutiveCount: consecutiveCount
       }))
     }
   }
@@ -123,7 +140,7 @@ export default function Home() {
       }))
     }
   }
-  
+
   const handleOnReset = () => {
     if (socket && socket.readyState === WebSocket.OPEN) {
       socket.send(JSON.stringify({
@@ -132,14 +149,43 @@ export default function Home() {
     }
   }
 
-  // gameStateがまだ無い場合はローディング表示
-  if (!gameState) {
-    return <div>Connecting to server...</div>;
+  const handleCpuGameStart = (name: string, difficulty: 'easy' | 'normal' | 'hard' | 'extra') => {
+    if (socket && socket.readyState === WebSocket.OPEN) {
+      socket.send(JSON.stringify({
+        type: 'cpuGameStart',
+        name: name,
+        difficulty: difficulty
+      }))
+    }
+  }
+  
+  const handleRightPlayer = () => {
+    if (socket && socket.readyState === WebSocket.OPEN) {
+      socket.send(JSON.stringify({
+        type: 'rightPlayer',
+      }))
+    }
+  }
+
+  const handleLeftPlayer = () => {
+    if (socket && socket.readyState === WebSocket.OPEN) {
+      socket.send(JSON.stringify({
+        type: 'leftPlayer',
+      }))
+    }
   }
 
   // gameState.statusの値に応じて、表示するコンポーネントを切り替える
+  if (!gameState) {
+    return (
+      <main style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh' }}>
+        <p>ロード中…</p>
+      </main>
+    );
+  }
+
   if (gameState.status === 'waiting') {
-    return <StartScreen gameState={gameState} onReady={handlePlayerReady} onNameChange={handleNameChange} myId={myId} />;
+    return <StartScreen gameState={gameState} onReady={handlePlayerReady} onNameChange={handleNameChange} onCpuGameStart={handleCpuGameStart} onReadyCansel={handleReadyCansel} onRightPlayer={handleRightPlayer} onLeftPlayer={handleLeftPlayer} myId={myId} />;
   }
 
   if (gameState.status === 'countdown') {
