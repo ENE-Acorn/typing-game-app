@@ -24,6 +24,8 @@ export default function GameScreen({ gameState, myId, onUpdateProgress, onWordCo
   const [correctlyType, setCorrectlyType] = useState(0);
   const hasReportedRef = useRef(false);//報告フラグ(ゲーム終了時のやつ)
   const consecutiveCount = useRef(0)
+  const [bottypingSpeedMs, setBotTypingSpeedMs] = useState(200);
+  const [botMistakeChance, setBotMistakeChance] = useState(0.05);
 
   //gameStateを分解
   const myPlayer = gameState.players[myId];
@@ -32,9 +34,26 @@ export default function GameScreen({ gameState, myId, onUpdateProgress, onWordCo
   const currentWordRomaji = gameState.currentWordRomaji; // ローマ字のお題 (例: "konnichiha")
 
   const botTypingIntervalRef = useRef<NodeJS.Timeout | null>(null); // setIntervalのID
-  const BOT_TYPING_SPEED_MS = 185; // 0.185秒に1文字
-  const BOT_MISTAKE_CHANCE = 0.025; // 97.5%
+    const difficulty: 'easy' | 'normal' | 'hard' | 'extra' = (gameState as any).difficulty ?? 'normal';
 
+  // 外側で宣言してから条件で上書きする（スコープ問題を回避）
+  let BOT_TYPING_SPEED_MS = 185;
+  let BOT_MISTAKE_CHANCE = 0.025;
+
+  console.log(difficulty);
+  if (difficulty === "easy") {
+    BOT_TYPING_SPEED_MS = 1000; // 1秒に1文字
+    BOT_MISTAKE_CHANCE = 0.05;
+  } else if (difficulty === "normal") {
+    BOT_TYPING_SPEED_MS = 500; // 0.5秒に1文字
+    BOT_MISTAKE_CHANCE = 0.025;
+  } else if (difficulty === "hard") {
+    BOT_TYPING_SPEED_MS = 170; // 0.17秒に1文字
+    BOT_MISTAKE_CHANCE = 0.01;
+  } else if (difficulty === "extra") {
+    BOT_TYPING_SPEED_MS = 100; // 0.15秒に1文字
+    BOT_MISTAKE_CHANCE = 0.005;
+  }
   //同じお題が出た時にも更新するための処理
   const totalScore = Object.values(gameState.players).reduce((sum, player) => sum + player.score, 0);
 
@@ -118,6 +137,7 @@ export default function GameScreen({ gameState, myId, onUpdateProgress, onWordCo
         return;
       }
 
+      console.log(BOT_MISTAKE_CHANCE + BOT_TYPING_SPEED_MS);
       const nextCharIndex = botTypedRef.current.length;
 
       if (nextCharIndex < targetWord.length) {
@@ -139,7 +159,7 @@ export default function GameScreen({ gameState, myId, onUpdateProgress, onWordCo
         botTypedRef.current = ''; // 次の単語に備えてリセット
       }
 
-    }, BOT_TYPING_SPEED_MS);
+    }, BOT_TYPING_SPEED_MS); // 難易度に応じた速度でタイピング
 
     // クリーンアップ
     return () => {
@@ -154,8 +174,7 @@ export default function GameScreen({ gameState, myId, onUpdateProgress, onWordCo
     gameState.status,
     currentWordRomaji,
     onWordCompleted,
-    BOT_MISTAKE_CHANCE,
-    BOT_TYPING_SPEED_MS
+    gameState.difficulty
   ]);
 
 

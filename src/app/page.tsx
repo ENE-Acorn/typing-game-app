@@ -33,6 +33,7 @@ export interface GameState {
   currentWordJP: '',
   currentWordRomaji: '',
   winnerPlayerName: ""
+  difficulty: 'easy' | 'normal' | 'hard' | 'extra';
 }
 
 export default function Home() {
@@ -46,7 +47,7 @@ export default function Home() {
   useEffect(() => {
     // サーバーに接続
 
-    const ws = new WebSocket('ws://192.168.8.222:3000/ws');
+    const ws = new WebSocket('ws://192.168.137.117:3000/ws');
     setSocket(ws);
 
 
@@ -148,11 +149,12 @@ export default function Home() {
     }
   }
 
-  const handleCpuGameStart = (name) => {
+  const handleCpuGameStart = (name: string, difficulty: 'easy' | 'normal' | 'hard' | 'extra') => {
     if (socket && socket.readyState === WebSocket.OPEN) {
       socket.send(JSON.stringify({
         type: 'cpuGameStart',
-        name: name
+        name: name,
+        difficulty: difficulty
       }))
     }
   }

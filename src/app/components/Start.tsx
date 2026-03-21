@@ -8,7 +8,7 @@ interface StartScreenProps {
     myId: string
     onReady: (name: string) => void;
     onNameChange: (name: string) => void;
-    onCpuGameStart: (name: string) => void;
+    onCpuGameStart: (name: string, difficulty: 'easy' | 'normal' | 'hard' | 'extra') => void;
     onReadyCansel: (name: string) => void;
     onRightPlayer: () => void;
     onLeftPlayer: () => void;
@@ -18,6 +18,8 @@ export default function StartScreen({ gameState, myId, onReady, onNameChange, on
     const [myName, setMyName] = useState<string>('');
     const [seat, setSeat] = useState<'left' | 'right' | null>(null);
     const [readyLocal, setReadyLocal] = useState<boolean>(false); // ローカルで準備状態を保持
+    const [showCpuDialog, setShowCpuDialog] = useState<boolean>(false);
+    const [cpuDifficulty, setCpuDifficulty] = useState<'easy' | 'normal' | 'hard' | 'extra'>('normal');
 
     let myPlayerInfo: Player | undefined;//ここで、もしプレイヤーがいなくても初期値が入るようにする
     let opponentInfo: Player | undefined;//同上
@@ -73,14 +75,31 @@ export default function StartScreen({ gameState, myId, onReady, onNameChange, on
     }, [myName, onReady, seat]);//依存関係
 
     const handleCpuGameStart = () => {
+        if (!seat) {
+            alert('座っている方向を選択してください');
+            return;
+        }
         if (myName === "") {
             alert("名前を入力してください")//名前の入力を必須に
             return;
         }
+        // 名前が入っていれば難易度選択ダイアログを表示
         if (myName.trim()) {
-            setReadyLocal(true);
-            onCpuGameStart(myName.trim())
+            setShowCpuDialog(true);
         }
+    }
+
+    const handleCpuStartConfirm = () => {
+        // ここでは既存のコールバックシグネチャを維持して名前だけ渡す
+        // 必要なら親コンポーネント側で難易度を受け取れるよう拡張してください
+        console.log('CPU対戦開始: 難易度=', cpuDifficulty);
+        setReadyLocal(true);
+            onCpuGameStart(myName.trim(), cpuDifficulty); // 名前と難易度を送信
+        setShowCpuDialog(false);
+    }
+
+    const handleCpuDialogCancel = () => {
+        setShowCpuDialog(false);
     }
     const handleReadyCansel = () => {
         setReadyLocal(false);
@@ -223,6 +242,35 @@ export default function StartScreen({ gameState, myId, onReady, onNameChange, on
             >
                 CPUと対戦
             </button>
+            {showCpuDialog && (
+                <div style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 9999 }}>
+                    <div style={{ background: '#d8e8ed', padding: '20px', borderRadius: '12px', width: '320px', boxSizing: 'border-box' }}>
+                        <h3 style={{ marginTop: 0 }}>難易度を選択してください</h3>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginBottom: '12px' }}>
+                            <label style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                <input type="radio" name="cpuDifficulty" checked={cpuDifficulty === 'easy'} onChange={() => setCpuDifficulty('easy')} />
+                                簡単（Easy）
+                            </label>
+                            <label style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                <input type="radio" name="cpuDifficulty" checked={cpuDifficulty === 'normal'} onChange={() => setCpuDifficulty('normal')} />
+                                普通（Normal）
+                            </label>
+                            <label style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                <input type="radio" name="cpuDifficulty" checked={cpuDifficulty === 'hard'} onChange={() => setCpuDifficulty('hard')} />
+                                難しい（Hard）
+                            </label>
+                            <label style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                <input type="radio" name="cpuDifficulty" checked={cpuDifficulty === 'extra'} onChange={() => setCpuDifficulty('extra')} />
+                                製作者（Extra）
+                            </label>
+                        </div>
+                        <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px' }}>
+                            <button onClick={handleCpuDialogCancel} style={{ padding: '8px 12px' }}>キャンセル</button>
+                            <button onClick={handleCpuStartConfirm} style={{ padding: '8px 12px', backgroundColor: '#0f172a', color: 'white', border: 'none', borderRadius: '6px' }}>開始</button>
+                        </div>
+                    </div>
+                </div>
+            )}
             <br /><br />
             <button
                 onClick={handleReadyCansel}

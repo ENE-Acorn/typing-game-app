@@ -4,6 +4,7 @@ const next = require('next');
 const { WebSocketServer } = require('ws');
 const fs = require('fs');
 const { a } = require('framer-motion/client');
+const { diff } = require('util');
 
 const dev = process.env.NODE_ENV !== 'production';
 const app = next({ dev });
@@ -25,6 +26,7 @@ let gameState = {
     currentWordJP: '',
     currentWordRomaji: '',
     winnerPlayerName: "",
+    difficulty: "normal"
 };
 const interferenceList = [
     'smallText', // 文字を小さく
@@ -320,10 +322,12 @@ app.prepare().then(() => {
 
                 case "cpuGameStart":
 
+                    gameState.difficulty = receivedMessage.difficulty;
                     player.name = receivedMessage.name;
                     player.isReady = true;
                     player.isBot = false;
 
+                    console.log(`がCPU戦を開始しましたyo`);
                     if (opponent) {
 
                         opponent.name = "CPU";
