@@ -287,7 +287,7 @@ app.prepare().then(() => {
                         consecutiveCount: receivedMessage.consecutiveCount
                     });
 
-                    if (receivedMessage.consecutiveCount == 50 && opponent.interferenceType == "null") {
+                    if (opponent && receivedMessage.consecutiveCount == 50 && opponent.interferenceType == "null") {
 
                         opponent.interferenceType = interferenceList[Math.floor(Math.random() * interferenceList.length)];
 
@@ -406,8 +406,34 @@ app.prepare().then(() => {
 
         ws.on('close', () => {
             clients.delete(ws);
-            // プレイヤーが切断されたらgameStateから削除する処理も本当は必要
             console.log(`${ws.playerId} が切断しました。`);
+
+            if (gameState.players[ws.playerId]) {
+                delete gameState.players[ws.playerId];
+
+                // ゲーム中に片方が切断した場合は、残ったプレイヤーが操作不能にならないよう待機状態に戻す
+                if (gameState.status !== 'waiting') {
+                    gameState.status = 'waiting';
+                    gameState.countdown = 3;
+                    gameState.startTime = 0;
+                    gameState.finishTime = 0;
+                    gameState.winnerPlayerName = '';
+                    gameState.currentWordJP = '';
+                    gameState.currentWordRomaji = '';
+
+                    for (const pId in gameState.players) {
+                        const p = gameState.players[pId];
+                        p.isReady = false;
+                        p.score = 0;
+                        p.typedText = '';
+                        p.interferenceType = 'null';
+                    }
+
+                    sendToPico({ type: 'gameClear' });
+                }
+
+                broadcastGameState();
+            }
         });
     });
 
