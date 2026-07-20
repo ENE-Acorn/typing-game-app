@@ -139,31 +139,31 @@ export default function StartScreen({ gameState, myId, onReady, onNameChange, on
                             onClick={handleLeftPlayer}
                             disabled={readyLocal || !!myPlayerInfo?.isReady}
                             style={{
-                                backgroundColor: seat === 'left' ? '#14532d' : '#f59e0b',
+                                backgroundColor: seat === 'left' ? '#16a34a' : '#64748b',
                                 color: '#ffffff',
                                 padding: '12px 18px',
                                 fontSize: '1.05rem',
                                 borderRadius: '8px',
-                                border: 'none',
-                                boxShadow: seat === 'left' ? '0 6px 14px rgba(20,83,45,0.25)' : 'none'
+                                border: seat === 'left' ? '3px solid #14532d' : '3px solid transparent',
+                                boxShadow: seat === 'left' ? '0 6px 14px rgba(20,83,45,0.35)' : 'none'
                             }}
                         >
-                            左
+                            {seat === 'left' ? '✓ 左（選択中）' : '左'}
                         </button>
                         <button
                             onClick={handleRightPlayer}
                             disabled={readyLocal || !!myPlayerInfo?.isReady}
                             style={{
-                                backgroundColor: seat === 'right' ? '#14532d' : '#16a34a',
+                                backgroundColor: seat === 'right' ? '#16a34a' : '#64748b',
                                 color: '#ffffff',
                                 padding: '12px 18px',
                                 fontSize: '1.05rem',
                                 borderRadius: '8px',
-                                border: 'none',
-                                boxShadow: seat === 'right' ? '0 6px 14px rgba(20,83,45,0.25)' : 'none'
+                                border: seat === 'right' ? '3px solid #14532d' : '3px solid transparent',
+                                boxShadow: seat === 'right' ? '0 6px 14px rgba(20,83,45,0.35)' : 'none'
                             }}
                         >
-                            右
+                            {seat === 'right' ? '✓ 右（選択中）' : '右'}
                         </button>
                     </div>
                 </div>
