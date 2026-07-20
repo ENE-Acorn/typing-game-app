@@ -6,6 +6,8 @@ from machine import Pin
 from websockets.client import connect
 
 # --- あなたの環境に合わせて書き換えてください ---
+# このファイルはRaspberry Pi Pico上で動作するため、サーバー側の.envを直接参照できません。
+# IPアドレスはサーバーPCの実際のLAN上のIPに、ポート番号はサーバー側.envのPORTと合わせて書き換えてください。
 WIFI_SSID = "typing-wifi"
 WIFI_PASSWORD = "tridentwifi"
 WEBSOCKET_URI = "ws://192.168.137.117:3000/ws"
