@@ -47,7 +47,7 @@ export default function Home() {
   useEffect(() => {
     // サーバーに接続
 
-    const ws = new WebSocket('ws://192.168.137.117:3000/ws');
+    const ws = new WebSocket(process.env.NEXT_PUBLIC_WS_URL || 'ws://localhost:3000/ws');
     setSocket(ws);
 
 

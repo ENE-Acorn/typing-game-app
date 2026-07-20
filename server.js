@@ -1,3 +1,4 @@
+require('dotenv').config();
 const { createServer } = require('http');
 const { parse } = require('url');
 const next = require('next');
@@ -9,6 +10,9 @@ const { diff } = require('util');
 const dev = process.env.NODE_ENV !== 'production';
 const app = next({ dev });
 const handle = app.getRequestHandler();
+
+const HOST = process.env.HOST || '0.0.0.0';
+const PORT = process.env.PORT || 3000;
 const wordsData = fs.readFileSync('./src/app/words.json', 'utf8');
 const words = JSON.parse(wordsData);//wods.jsonから読み取る
 
@@ -366,7 +370,7 @@ app.prepare().then(() => {
         });
     });
 
-    server.listen(3000, '0.0.0.0', () => {
-        console.log('> Ready on http://localhost:3000');
+    server.listen(PORT, HOST, () => {
+        console.log(`> Ready on http://${HOST}:${PORT}`);
     });
 });
