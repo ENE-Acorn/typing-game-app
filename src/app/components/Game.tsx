@@ -1,6 +1,7 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useMemo } from 'react';
 import type { GameState, Player } from '../page';
 import ResultScreen from './Result';
+import { buildChunks, createTypingState, typeChar, getRenderInfo, type TypingState } from '../romajiInput';
 
 
 //CSSファイルをインポート
@@ -20,6 +21,8 @@ interface GameScreenProps {
 export default function GameScreen({ gameState, myId, onUpdateProgress, onWordCompleted, onGameClear, onReset }: GameScreenProps) {
 
   const [typedText, setTypedText] = useState('');  //自分が正しく打てた文字数を記録
+  // ヘボン式/訓令式など複数の入力方式を受け付けるためのチャンク単位の入力状態
+  const [typingState, setTypingState] = useState<TypingState>(createTypingState());
   const [missType, setMissType] = useState(0);  //自分が何回ミスをしたか記録
   const [correctlyType, setCorrectlyType] = useState(0);
   const hasReportedRef = useRef(false);//報告フラグ(ゲーム終了時のやつ)
@@ -32,6 +35,8 @@ export default function GameScreen({ gameState, myId, onUpdateProgress, onWordCo
   const opponent = Object.values(gameState.players).find(p => p.id !== myId);
   const currentWordJP = gameState.currentWordJP; // 日本語のお題 (例: "こんにちは")
   const currentWordRomaji = gameState.currentWordRomaji; // ローマ字のお題 (例: "konnichiha")
+  // お題ごとに、かな1音単位で複数の入力方式を受け付けるためのチャンク列を作る
+  const chunks = useMemo(() => buildChunks(currentWordRomaji), [currentWordRomaji]);
 
   const botTypingIntervalRef = useRef<NodeJS.Timeout | null>(null); // setIntervalのID
     const difficulty: 'easy' | 'normal' | 'hard' | 'extra' = (gameState as any).difficulty ?? 'normal';
@@ -79,6 +84,7 @@ export default function GameScreen({ gameState, myId, onUpdateProgress, onWordCo
   // お題が変わるたびに、自分の入力をリセットする係
   useEffect(() => {
     setTypedText('');
+    setTypingState(createTypingState());
     botTypedRef.current = ''; // 次の単語に備えてリセット
   }, [totalScore]);
 
@@ -189,19 +195,18 @@ export default function GameScreen({ gameState, myId, onUpdateProgress, onWordCo
           return;
         }
 
-        // 次に打つべき文字が、お題のどの文字かを確認
-        const nextCharIndex = typedText.length;
-        if (e.key === currentWordRomaji[nextCharIndex]) {
+        // 複数の入力方式(ヘボン式/訓令式など)に対応した判定エンジンで1文字分を照合
+        const result = typeChar(chunks, typingState, e.key);
+        if (result.success) {
           // 【正解！】
-          const newTypedText = typedText + e.key;
-          console.log("ssss")
-          setTypedText(newTypedText); // 正しく打てた文字を記憶
+          setTypingState(result.state);
+          setTypedText(result.state.typedTotal); // 正しく打てた文字列を記憶
 
           setCorrectlyType(prev => prev + 1);
 
           consecutiveCount.current++;
 
-          if (newTypedText === currentWordRomaji) {
+          if (result.wordCompleted) {
             //ワードを打ち切った場合
             onWordCompleted(currentWordRomaji);//サーバに通信
           }
@@ -215,22 +220,26 @@ export default function GameScreen({ gameState, myId, onUpdateProgress, onWordCo
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);//リスナーを削除
-  }, [typedText, currentWordRomaji, gameState.status, onWordCompleted, missType]);
+  }, [typingState, chunks, currentWordRomaji, gameState.status, onWordCompleted, missType]);
 
   if (gameState.status === 'finished') {//ゲームが終わっていたらリザルト画面へ
     return <ResultScreen gameState={gameState} myId={myId} onReset={handleOnReset} />;
   }
 
   // お題の文字を色分けして表示するための小さな部品
-  const renderWord = (render) => {
-    return currentWordRomaji.split('').map((char, index) => {
+  // word: 表示するローマ字文字列, typedLength: そのうち何文字が入力済みか
+  const renderWord = (word: string, typedLength: number) => {
+    return word.split('').map((char, index) => {
       let color = '#6c757d'; // 未入力の文字はグレー
-      if (index < render.length) {
+      if (index < typedLength) {
         color = '#46b963ff'; // 正しく入力された文字は白
       }
       return <span key={index} style={{ color, fontSize: '2.5rem', margin: '0 2px' }}>{char}</span>;
     });
   };
+
+  // 自分の入力状況(複数の入力方式を反映した表示文字列と入力済み文字数)
+  const myRenderInfo = getRenderInfo(chunks, typingState);
 
   const myInterference = myPlayer?.interferenceType || "null";
 
@@ -289,7 +298,7 @@ export default function GameScreen({ gameState, myId, onUpdateProgress, onWordCo
           <div className="playerScore">{myPlayer?.score || 0}</div>
 
           <div className="typingArea">
-            {renderWord(typedText)}
+            {renderWord(myRenderInfo.display, myRenderInfo.coloredLength)}
           </div>
 
           <div className="statsContainer">
@@ -323,7 +332,7 @@ export default function GameScreen({ gameState, myId, onUpdateProgress, onWordCo
           <div className="playerName">{opponent?.name || 'OPPONENT'}</div>
           <div className="playerScore">{opponent?.score || 0}</div>
           <div className="typingArea">
-            {opponent ? renderWord(opponent.typedText) : <span style={{ color: '#a0a0a0' }}>...</span>}
+            {opponent ? renderWord(currentWordRomaji, opponent.typedText.length) : <span style={{ color: '#a0a0a0' }}>...</span>}
           </div>
           {myInterference === 'smoke' && (
             <div className="smoke-overlay">
