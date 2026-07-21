@@ -42,6 +42,7 @@ export default function Home() {
   const [gameState, setGameState] = useState<GameState | null>(null);
   const [socket, setSocket] = useState<WebSocket | null>(null);
   const [myId, setMyId] = useState<string>('');
+  const [isFull, setIsFull] = useState<boolean>(false); // このゲームは2人プレイ専用のため、3人目以降は満員として扱う
 
 
   useEffect(() => {
@@ -60,13 +61,18 @@ export default function Home() {
         setMyId(receivedData.playerId);
       }
 
+      //既に2人埋まっていて満員だった場合の処理
+      if (receivedData.type === 'full') {
+        setIsFull(true);
+      }
+
       //state(ゲーム全体の情報)が更新された場合の処理
       if (receivedData.type === 'updateState') {
         setGameState(receivedData.state);
       }
     };
     // 接続維持のためのハートビート（30秒ごとにpingを送信）
-    setInterval(() => {
+    const pingInterval = setInterval(() => {
       if (ws.readyState === WebSocket.OPEN) {
         ws.send(JSON.stringify({
           type: 'ping',
@@ -74,6 +80,14 @@ export default function Home() {
       }
 
     }, 30000); // 30秒ごと
+
+    // アンマウント時にWebSocket接続とタイマーを片付ける
+    // (開発モードのReact StrictModeによるeffectの二重実行で、
+    //  1つのタブが2つの接続＝2人分のプレイヤー枠を消費するのを防ぐ)
+    return () => {
+      clearInterval(pingInterval);
+      ws.close();
+    };
   }
     , []);
 
@@ -173,6 +187,15 @@ export default function Home() {
         type: 'leftPlayer',
       }))
     }
+  }
+
+  // このゲームは2人プレイ専用のため、既に2人埋まっている場合はここで打ち止め
+  if (isFull) {
+    return (
+      <main style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh' }}>
+        <p>満員です。他のプレイヤーが終わるまでお待ちください。</p>
+      </main>
+    );
   }
 
   // gameState.statusの値に応じて、表示するコンポーネントを切り替える

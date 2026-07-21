@@ -169,6 +169,15 @@ app.prepare().then(() => {
 
     //新しいプレイヤーが接続してきた時の処理
     wss.on('connection', (ws) => {
+        // このゲームは2人プレイ専用のため、既に2人埋まっている場合は
+        // 満員である旨を伝えて接続を切る(中途半端な「何も反映されない」状態を防ぐ)
+        if (Object.keys(gameState.players).length >= 2) {
+            ws.send(JSON.stringify({ type: 'full' }));
+            console.log('満員のため接続を拒否しました。');
+            ws.close();
+            return;
+        }
+
         // 新しいクライアントをリストに追加
         clients.add(ws);
 
@@ -183,20 +192,18 @@ app.prepare().then(() => {
         }));
 
         // gameStateにプレイヤーの初期データを作成
-        if (Object.keys(gameState.players).length < 2) {
-            gameState.players[playerId] = {
-                id: playerId,
-                name: '名無しさん',
-                isReady: false,
-                progress: 0,
-                score: 0,
-                typedText: "",
-                interferenceType: "null",
-                isBot: false,
-                seat : null
-            };
-            console.log(`${playerId} が接続しました。`);
-        }
+        gameState.players[playerId] = {
+            id: playerId,
+            name: '名無しさん',
+            isReady: false,
+            progress: 0,
+            score: 0,
+            typedText: "",
+            interferenceType: "null",
+            isBot: false,
+            seat : null
+        };
+        console.log(`${playerId} が接続しました。`);
 
 
         // 接続してきた人に、現在のゲーム状況を送信
