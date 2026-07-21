@@ -314,7 +314,7 @@ export default function GameScreen({ gameState, myId, onUpdateProgress, onWordCo
         >
 
           {/* ★ 妨害マーク (div の "内側" に配置) */}
-          {opponent.interferenceType !== "null" && (
+          {opponent && opponent.interferenceType !== "null" && (
             <span style={{
               position: 'absolute', // 親要素を基準に絶対配置
               top: '15px',          // 親要素の上から15px

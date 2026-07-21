@@ -3,6 +3,7 @@ const { createServer } = require('http');
 const { parse } = require('url');
 const next = require('next');
 const { WebSocketServer } = require('ws');
+const { SerialPort } = require('serialport');
 const fs = require('fs');
 const { a } = require('framer-motion/client');
 const { diff } = require('util');
@@ -13,6 +14,61 @@ const handle = app.getRequestHandler();
 
 const HOST = process.env.HOST || '0.0.0.0';
 const PORT = process.env.PORT || 3000;
+
+// Raspberry Pi PicoとはUSBシリアル接続でやり取りする（WindowsのCOMポート名を.envで指定）
+const PICO_SERIAL_PORT = process.env.PICO_SERIAL_PORT || '';
+const PICO_SERIAL_BAUD = Number(process.env.PICO_SERIAL_BAUD) || 115200;
+const PICO_RECONNECT_INTERVAL_MS = 5000;
+
+let picoSerial = null;
+
+function sendToPico(message) {
+    if (picoSerial && picoSerial.isOpen) {
+        picoSerial.write(JSON.stringify(message) + '\n');
+    }
+}
+
+// PICO_SERIAL_PORTが未指定の場合、Raspberry Pi PicoのUSBベンダーID(2e8a)からポートを自動検出する
+async function findPicoPortPath() {
+    if (PICO_SERIAL_PORT) return PICO_SERIAL_PORT;
+    const ports = await SerialPort.list();
+    const pico = ports.find((p) => (p.vendorId || '').toLowerCase() === '2e8a');
+    return pico ? pico.path : null;
+}
+
+async function connectPicoSerial() {
+    if (picoSerial && picoSerial.isOpen) return;
+
+    const path = await findPicoPortPath();
+    if (!path) {
+        console.log('Raspberry Pi Picoのシリアルポートが見つかりません。接続を待機します...');
+        return;
+    }
+
+    const port = new SerialPort({ path, baudRate: PICO_SERIAL_BAUD }, (err) => {
+        if (err) {
+            console.log(`Picoシリアルポート(${path})のオープンに失敗しました: ${err.message}`);
+        }
+    });
+
+    port.on('open', () => {
+        console.log(`Raspberry Pi Picoにシリアル接続しました (${path})`);
+        picoSerial = port;
+    });
+
+    port.on('close', () => {
+        console.log('Picoとのシリアル接続が切断されました。');
+        picoSerial = null;
+    });
+
+    port.on('error', (err) => {
+        console.log(`Picoシリアル通信エラー: ${err.message}`);
+        picoSerial = null;
+    });
+}
+
+connectPicoSerial();
+setInterval(connectPicoSerial, PICO_RECONNECT_INTERVAL_MS);
 const wordsData = fs.readFileSync('./src/app/words.json', 'utf8');
 const words = JSON.parse(wordsData);//wods.jsonから読み取る
 
@@ -42,7 +98,6 @@ const interferenceList = [
 //接続しているクライアント全員を管理するリスト
 const clients = new Set();
 let nextPlayerId = 1; // 次に接続してくるプレイヤーの番号
-let picoClient = null;
 
 app.prepare().then(() => {
     const server = createServer((req, res) => {
@@ -72,7 +127,7 @@ app.prepare().then(() => {
         };
         const messageString = JSON.stringify(message);
         for (const client of clients) {
-            if (client.readyState === 1 && client !== picoClient) {
+            if (client.readyState === 1) {
                 client.send(messageString);
             }
         }
@@ -141,9 +196,6 @@ app.prepare().then(() => {
                 seat : null
             };
             console.log(`${playerId} が接続しました。`);
-        } else if (picoClient !== "null") {
-            console.log("Raspberry Pi Picoが接続しました。");
-            picoClient = ws; // Picoの接続を専用変数に保存
         }
 
 
@@ -229,16 +281,13 @@ app.prepare().then(() => {
 
                     player.typedText = receivedMessage.typedText;
 
-                    if (picoClient && picoClient.readyState === 1) { // 1はWebSocket.OPENの意味
-                        picoClient.send(JSON.stringify({
-                            type: "progressUpdate",//定期でプレイヤーのライトをどこまで点灯させるか送信
-                            seat: player.seat,
-                            consecutiveCount: receivedMessage.consecutiveCount
+                    sendToPico({
+                        type: "progressUpdate",//定期でプレイヤーのライトをどこまで点灯させるか送信
+                        seat: player.seat,
+                        consecutiveCount: receivedMessage.consecutiveCount
+                    });
 
-                        }));
-                    }
-
-                    if (receivedMessage.consecutiveCount == 50 && opponent.interferenceType == "null") {
+                    if (opponent && receivedMessage.consecutiveCount == 50 && opponent.interferenceType == "null") {
 
                         opponent.interferenceType = interferenceList[Math.floor(Math.random() * interferenceList.length)];
 
@@ -286,11 +335,9 @@ app.prepare().then(() => {
                     player.correctlyType = receivedMessage.correctlyType;
                     player.missType = receivedMessage.missType;
 
-                    if (picoClient && picoClient.readyState === 1) { // 1はWebSocket.OPENの意味
-                        picoClient.send(JSON.stringify({
-                            type: "gameClear",//ゲームが終わった時にライトを消灯させる処理
-                        }));
-                    }
+                    sendToPico({
+                        type: "gameClear",//ゲームが終わった時にライトを消灯させる処理
+                    });
 
                     broadcastGameState();
                     break;
@@ -313,11 +360,9 @@ app.prepare().then(() => {
                         gameState.winnerPlayerName = "";
                     gameState.countdown = 3;
 
-                    if (picoClient && picoClient.readyState === 1) { // 1はWebSocket.OPENの意味
-                        picoClient.send(JSON.stringify({
-                            type: "gameClear",//ゲームが終わった時にライトを消灯させる処理
-                        }));
-                    }
+                    sendToPico({
+                        type: "gameClear",//ゲームが終わった時にライトを消灯させる処理
+                    });
 
                     gameState.status = "waiting";
 
@@ -361,12 +406,34 @@ app.prepare().then(() => {
 
         ws.on('close', () => {
             clients.delete(ws);
-            if (ws === picoClient) {
-                console.log("Picoが切断しました。");
-                picoClient = null;
-            }
-            // プレイヤーが切断されたらgameStateから削除する処理も本当は必要
             console.log(`${ws.playerId} が切断しました。`);
+
+            if (gameState.players[ws.playerId]) {
+                delete gameState.players[ws.playerId];
+
+                // ゲーム中に片方が切断した場合は、残ったプレイヤーが操作不能にならないよう待機状態に戻す
+                if (gameState.status !== 'waiting') {
+                    gameState.status = 'waiting';
+                    gameState.countdown = 3;
+                    gameState.startTime = 0;
+                    gameState.finishTime = 0;
+                    gameState.winnerPlayerName = '';
+                    gameState.currentWordJP = '';
+                    gameState.currentWordRomaji = '';
+
+                    for (const pId in gameState.players) {
+                        const p = gameState.players[pId];
+                        p.isReady = false;
+                        p.score = 0;
+                        p.typedText = '';
+                        p.interferenceType = 'null';
+                    }
+
+                    sendToPico({ type: 'gameClear' });
+                }
+
+                broadcastGameState();
+            }
         });
     });
 
