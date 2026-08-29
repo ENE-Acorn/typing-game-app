@@ -10,6 +10,7 @@ from machine import Pin
 # このPico側では特別な設定は不要です（USB接続するだけで自動的に認識されます）。
 PIN_NUM = 14      # GP14 (物理ピン19)
 LED_COUNT = 10   # LEDの数
+COUNT_PER_LED = 5  # 連続何文字ごとにLEDを1個点灯させるか
 PIN_NUM2 = 15    # GP15 (物理ピン20)
 # 動作確認用に、一定間隔で「動いている」ことをサーバへ知らせる間隔(ミリ秒)
 HEARTBEAT_INTERVAL_MS = 5000
@@ -37,7 +38,6 @@ except Exception as e:
     print(f"本体LEDの初期化に失敗しました(処理は続行します): {e}")
 
 def lightOn(seat, consecutiveCount):
-    num_to_light = 0
     print(f"lightOn実行 - Player ID: {seat}, consecutiveCount: {consecutiveCount}")
     if np is None or np2 is None:
         print(f"LEDを操作できません: {init_error}")
@@ -45,47 +45,24 @@ def lightOn(seat, consecutiveCount):
     if seat not in ("right", "left"):
         print(f"seatが不正なため点灯しません: {seat}")
         return
-    if seat == "right":
-        if consecutiveCount >= 50:
-            num_to_light = 10
-        elif consecutiveCount >= 40:
-            num_to_light = 8
-        elif consecutiveCount >= 30:
-            num_to_light = 6
-        elif consecutiveCount >= 20:
-            num_to_light = 4
-        elif consecutiveCount >= 10:
-            num_to_light = 2
 
-         # すべてのLEDを消灯（リセット）
-        np.fill((0, 0, 0))
+    try:
+        count = int(consecutiveCount)
+    except (TypeError, ValueError):
+        count = 0
 
-        # 必要な数のLEDを点灯
-        for i in range(num_to_light):
-            np[i] = (255,0,0)
+    # 連続COUNT_PER_LED文字ごとにLEDを1個点灯する(LED_COUNT個で打ち止め)
+    num_to_light = min(count // COUNT_PER_LED, LED_COUNT)
 
-        np.write()
+    # 右のプレイヤーはnp、左のプレイヤーはnp2のテープを使う
+    strip = np if seat == "right" else np2
 
-    elif seat == "left":
-        if consecutiveCount >= 50:
-            num_to_light = 10
-        elif consecutiveCount >= 40:
-            num_to_light = 8
-        elif consecutiveCount >= 30:
-            num_to_light = 6
-        elif consecutiveCount >= 20:
-            num_to_light = 4
-        elif consecutiveCount >= 10:
-            num_to_light = 2
+    # すべてのLEDを消灯（リセット）してから、必要な数のLEDを点灯
+    strip.fill((0, 0, 0))
+    for i in range(num_to_light):
+        strip[i] = (255, 0, 0)
 
-        # すべてのLEDを消灯（リセット）
-        np2.fill((0, 0, 0))
-
-        # 必要な数のLEDを点灯
-        for i in range(num_to_light):
-            np2[i] = (255,0,0)
-
-        np2.write()
+    strip.write()
 
 def allLightOff():
     print("lightOff実行")
