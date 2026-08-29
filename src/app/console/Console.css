@@ -1,0 +1,440 @@
+/* 中央コンソール(/console)専用のスタイル */
+.console-root {
+    position: fixed;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    background-color: #0b1220;
+    color: #e2e8f0;
+    font-family: 'Segoe UI', 'Hiragino Sans', 'Noto Sans JP', sans-serif;
+    overflow: hidden;
+}
+
+/* ===== 上部のバー ===== */
+.console-header {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    padding: 10px 18px;
+    background-color: #111c31;
+    border-bottom: 1px solid #24334d;
+    flex-shrink: 0;
+}
+
+.console-title {
+    margin: 0;
+    font-size: 1.25rem;
+    font-weight: 700;
+    letter-spacing: 0.05em;
+}
+
+.console-header-spacer {
+    flex: 1;
+}
+
+.console-back-link {
+    color: #93c5fd;
+    text-decoration: none;
+    font-size: 0.9rem;
+    border: 1px solid #2c4a7a;
+    border-radius: 6px;
+    padding: 6px 12px;
+}
+
+.console-back-link:hover {
+    background-color: #1b2b47;
+}
+
+/* 接続状態のランプ */
+.status-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 0.85rem;
+    padding: 4px 10px;
+    border-radius: 999px;
+    background-color: #1b2b47;
+    white-space: nowrap;
+}
+
+.status-dot {
+    width: 9px;
+    height: 9px;
+    border-radius: 50%;
+    background-color: #64748b;
+}
+
+.status-dot.is-on {
+    background-color: #22c55e;
+    box-shadow: 0 0 8px #22c55e;
+}
+
+.status-dot.is-off {
+    background-color: #ef4444;
+}
+
+/* ===== 4分割のグリッド ===== */
+.console-grid {
+    flex: 1;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    grid-template-rows: 1fr 1fr;
+    gap: 10px;
+    padding: 10px;
+    min-height: 0;
+}
+
+/* どれか1つを最大化しているときは、その1枚だけを表示する */
+.console-grid.is-maximized {
+    grid-template-columns: 1fr;
+    grid-template-rows: 1fr;
+}
+
+.console-grid.is-maximized .panel {
+    display: none;
+}
+
+.console-grid.is-maximized .panel.is-maximized {
+    display: flex;
+}
+
+.panel {
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+    min-width: 0;
+    background-color: #111c31;
+    border: 1px solid #24334d;
+    border-radius: 10px;
+    overflow: hidden;
+}
+
+.panel-header {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 8px 12px;
+    background-color: #16233c;
+    border-bottom: 1px solid #24334d;
+    flex-shrink: 0;
+}
+
+.panel-title {
+    margin: 0;
+    font-size: 1rem;
+    font-weight: 700;
+}
+
+.panel-header-spacer {
+    flex: 1;
+}
+
+.panel-count {
+    font-size: 0.8rem;
+    color: #94a3b8;
+}
+
+.panel-button {
+    background-color: #24344f;
+    color: #e2e8f0;
+    border: none;
+    border-radius: 6px;
+    padding: 5px 10px;
+    font-size: 0.8rem;
+    cursor: pointer;
+}
+
+.panel-button:hover {
+    background-color: #33507a;
+}
+
+.panel-body {
+    flex: 1;
+    min-height: 0;
+    overflow-y: auto;
+    padding: 12px;
+}
+
+/* ===== ログ表示 ===== */
+.log-body {
+    padding: 6px 0;
+    font-family: 'Consolas', 'SFMono-Regular', 'Menlo', monospace;
+    font-size: 0.82rem;
+    line-height: 1.5;
+}
+
+.log-line {
+    display: flex;
+    gap: 10px;
+    padding: 2px 12px;
+    white-space: pre-wrap;
+    word-break: break-word;
+}
+
+.log-line:nth-child(odd) {
+    background-color: rgba(255, 255, 255, 0.02);
+}
+
+.log-time {
+    color: #64748b;
+    flex-shrink: 0;
+}
+
+.log-text {
+    flex: 1;
+}
+
+.log-line.level-warn .log-text {
+    color: #fbbf24;
+}
+
+.log-line.level-error .log-text {
+    color: #f87171;
+}
+
+.log-line.level-info .log-text {
+    color: #7dd3fc;
+}
+
+.log-empty {
+    padding: 12px;
+    color: #64748b;
+    font-size: 0.85rem;
+}
+
+/* ===== 連続正解数 ===== */
+.streak-list {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+    height: 100%;
+}
+
+.streak-card {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    background-color: #16233c;
+    border: 1px solid #24334d;
+    border-radius: 10px;
+    padding: 14px 16px;
+    min-height: 0;
+}
+
+.streak-head {
+    display: flex;
+    align-items: baseline;
+    gap: 10px;
+}
+
+.streak-name {
+    font-size: 1.3rem;
+    font-weight: 700;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.seat-badge {
+    font-size: 0.75rem;
+    padding: 3px 8px;
+    border-radius: 999px;
+    background-color: #24344f;
+    color: #cbd5e1;
+    flex-shrink: 0;
+}
+
+.seat-badge.seat-left {
+    background-color: #1d4ed8;
+    color: #ffffff;
+}
+
+.seat-badge.seat-right {
+    background-color: #b91c1c;
+    color: #ffffff;
+}
+
+.streak-value {
+    display: flex;
+    align-items: baseline;
+    gap: 8px;
+    margin: 6px 0;
+}
+
+.streak-number {
+    font-size: 3.2rem;
+    font-weight: 800;
+    line-height: 1;
+    color: #facc15;
+}
+
+.streak-unit {
+    font-size: 1rem;
+    color: #94a3b8;
+}
+
+.streak-bar {
+    height: 12px;
+    background-color: #0b1220;
+    border-radius: 999px;
+    overflow: hidden;
+}
+
+.streak-bar-fill {
+    height: 100%;
+    background: linear-gradient(90deg, #38bdf8, #facc15);
+    transition: width 0.15s linear;
+}
+
+.streak-note {
+    margin: 6px 0 0 0;
+    font-size: 0.85rem;
+    color: #94a3b8;
+}
+
+.streak-note.is-fired {
+    color: #f87171;
+    font-weight: 700;
+}
+
+/* ===== 最大化したときの表示 ===== */
+/* 広い画面に合わせて文字も大きくする */
+.console-grid.is-maximized .streak-number {
+    font-size: 6rem;
+}
+
+.console-grid.is-maximized .streak-name {
+    font-size: 2rem;
+}
+
+.console-grid.is-maximized .match-word {
+    font-size: 3.2rem;
+}
+
+.console-grid.is-maximized .match-romaji {
+    font-size: 2rem;
+}
+
+.console-grid.is-maximized .match-name {
+    font-size: 1.6rem;
+}
+
+.console-grid.is-maximized .match-score {
+    font-size: 3rem;
+}
+
+.console-grid.is-maximized .log-body {
+    font-size: 1rem;
+}
+
+/* ===== 対戦中の画面 ===== */
+.match-view {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+}
+
+.match-status {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 10px;
+}
+
+.match-word {
+    text-align: center;
+    font-size: 1.8rem;
+    font-weight: 700;
+    margin-bottom: 12px;
+    word-break: break-all;
+}
+
+.match-players {
+    display: flex;
+    gap: 12px;
+    flex: 1;
+    min-height: 0;
+}
+
+.match-card {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    background-color: #16233c;
+    border: 1px solid #24334d;
+    border-radius: 10px;
+    padding: 12px;
+}
+
+.match-card-head {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 6px;
+}
+
+.match-name {
+    font-weight: 700;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.match-score {
+    margin-left: auto;
+    font-size: 1.6rem;
+    font-weight: 800;
+    color: #4ade80;
+}
+
+.match-romaji {
+    font-family: 'Consolas', 'SFMono-Regular', 'Menlo', monospace;
+    font-size: 1.1rem;
+    word-break: break-all;
+    min-height: 1.6em;
+}
+
+.match-romaji .typed {
+    color: #4ade80;
+}
+
+.match-romaji .untyped {
+    color: #64748b;
+}
+
+.match-progress {
+    height: 8px;
+    background-color: #0b1220;
+    border-radius: 999px;
+    overflow: hidden;
+    /* カードが縦に伸びたときは、スコアのバーを一番下に寄せる */
+    margin-top: auto;
+}
+
+.match-progress-fill {
+    height: 100%;
+    background-color: #38bdf8;
+    transition: width 0.2s ease;
+}
+
+.match-interference {
+    margin-top: 8px;
+    font-size: 0.85rem;
+    color: #f87171;
+    font-weight: 700;
+}
+
+.match-winner {
+    margin-top: 12px;
+    text-align: center;
+    font-size: 1.2rem;
+    font-weight: 700;
+    color: #facc15;
+}
+
+.console-empty {
+    color: #64748b;
+    font-size: 0.9rem;
+}

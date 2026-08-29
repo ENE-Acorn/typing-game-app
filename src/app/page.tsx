@@ -2,6 +2,7 @@
 import { useState, useEffect } from 'react';
 
 // これから作成する3つの画面コンポーネントを読み込む
+import Link from 'next/link';
 import StartScreen from './components/Start';
 import GameScreen from './components/Game';
 import CountdownScreen from './components/Countdown';
@@ -18,6 +19,7 @@ export interface Player {
   interferenceType: string;
   isBot: boolean;
   seat: 'left' | 'right' | null;
+  consecutiveCount: number; // 連続で正解できている文字数（中央コンソールでの表示用）
 }
 
 // GameStateの設計図
@@ -193,10 +195,29 @@ export default function Home() {
   }
 
   // このゲームは2人プレイ専用のため、既に2人埋まっている場合はここで打ち止め
+  // (3人目以降は待機画面になるので、そこから中央コンソールへ移動できるようにする)
   if (isFull) {
     return (
       <main style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh' }}>
         <p>満員です。他のプレイヤーが終わるまでお待ちください。</p>
+        <Link
+          href="/console"
+          style={{
+            position: 'fixed',
+            right: '24px',
+            bottom: '24px',
+            padding: '14px 22px',
+            backgroundColor: '#0f172a',
+            color: '#ffffff',
+            fontSize: '1.05rem',
+            fontWeight: 700,
+            borderRadius: '10px',
+            textDecoration: 'none',
+            boxShadow: '0 6px 16px rgba(15,23,42,0.35)'
+          }}
+        >
+          コンソールへ移動 →
+        </Link>
       </main>
     );
   }
