@@ -43,6 +43,10 @@ function sendToPico(message) {
 async function findPicoPortPath() {
     if (PICO_SERIAL_PORT) return PICO_SERIAL_PORT;
     const ports = await SerialPort.list();
+    debugLog(
+        '[Pico検出] 認識中のシリアルポート:',
+        ports.map((p) => `${p.path}(vendorId=${p.vendorId || '不明'})`).join(', ') || 'なし'
+    );
     const pico = ports.find((p) => (p.vendorId || '').toLowerCase() === '2e8a');
     return pico ? pico.path : null;
 }
