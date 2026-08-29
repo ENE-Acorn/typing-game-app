@@ -33,6 +33,10 @@ const YOUON_TABLE: Record<string, string[]> = {
   zyo: ['zyo', 'jo', 'zixyo', 'zilyo', 'jixyo', 'jilyo'],
   bya: ['bya'], byu: ['byu'], byo: ['byo'],
   pya: ['pya'], pyu: ['pyu'], pyo: ['pyo'],
+  // 外来語音（訓令式に対応表記がないため、IMEで一般的な表記をキーにする）
+  tye: ['tye', 'che', 'cye', 'tixe', 'tile'], // チェ
+  thi: ['thi', 'texi', 'teli'],               // ティ
+  dhu: ['dhu', 'dexyu', 'delyu'],             // デュ
 };
 
 // 五十音（2文字, 訓令式表記をキーに複数方式を登録）
@@ -42,6 +46,7 @@ const MORA_TABLE: Record<string, string[]> = {
   ta: ['ta'], ti: ['ti', 'chi'], tu: ['tu', 'tsu'], te: ['te'], to: ['to'],
   na: ['na'], ni: ['ni'], nu: ['nu'], ne: ['ne'], no: ['no'],
   ha: ['ha'], hi: ['hi'], hu: ['hu', 'fu'], he: ['he'], ho: ['ho'],
+  fo: ['fo', 'fuxo', 'fulo', 'huxo', 'hulo'], // フォ（外来語音）
   ma: ['ma'], mi: ['mi'], mu: ['mu'], me: ['me'], mo: ['mo'],
   ya: ['ya'], yu: ['yu'], yo: ['yo'],
   ra: ['ra'], ri: ['ri'], ru: ['ru'], re: ['re'], ro: ['ro'],
