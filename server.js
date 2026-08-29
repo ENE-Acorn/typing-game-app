@@ -1,6 +1,5 @@
 require('dotenv').config();
 const { createServer } = require('http');
-const { parse } = require('url');
 const next = require('next');
 const { WebSocketServer } = require('ws');
 const { SerialPort, ReadlineParser } = require('serialport');
@@ -122,9 +121,48 @@ const interferenceList = [
 const clients = new Set();
 let nextPlayerId = 1; // 次に接続してくるプレイヤーの番号
 
+// リクエストURLを解析する。
+// url.parse()はNode.jsで非推奨(DEP0169)のため、WHATWG URL APIで
+// Next.jsのhandle()が期待する形（pathname/query/search）に組み立てる。
+function parseRequestUrl(req) {
+    const url = new URL(req.url, `http://${req.headers.host || 'localhost'}`);
+
+    // 同じキーが複数ある場合はquerystring.parse()と同様に配列にする
+    const query = {};
+    for (const [key, value] of url.searchParams) {
+        if (query[key] === undefined) {
+            query[key] = value;
+        } else if (Array.isArray(query[key])) {
+            query[key].push(value);
+        } else {
+            query[key] = [query[key], value];
+        }
+    }
+
+    // url.parse(相対URL)と同じ形（protocol/hostはnull、hrefはパスのみ）で返す。
+    // 絶対URLの情報を含めるとNext.jsが正規化用のリダイレクトを返してしまうため。
+    const search = url.search || null;
+    const hash = url.hash || null;
+
+    return {
+        protocol: null,
+        slashes: null,
+        auth: null,
+        host: null,
+        port: null,
+        hostname: null,
+        hash,
+        search,
+        query,
+        pathname: url.pathname,
+        path: url.pathname + (search || ''),
+        href: url.pathname + (search || '') + (hash || ''),
+    };
+}
+
 app.prepare().then(() => {
     const server = createServer((req, res) => {
-        const parsedUrl = parse(req.url, true);
+        const parsedUrl = parseRequestUrl(req);
         handle(req, res, parsedUrl);
     });
 
@@ -132,7 +170,7 @@ app.prepare().then(() => {
     const wss = new WebSocketServer({ noServer: true });
 
     server.on('upgrade', (req, socket, head) => {
-        const { pathname } = parse(req.url, true);
+        const { pathname } = parseRequestUrl(req);
         if (pathname === '/ws') {
             wss.handleUpgrade(req, socket, head, (ws) => {
                 wss.emit('connection', ws, req);

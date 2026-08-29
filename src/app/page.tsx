@@ -48,7 +48,10 @@ export default function Home() {
   useEffect(() => {
     // サーバーに接続
 
-    const ws = new WebSocket(process.env.NEXT_PUBLIC_WS_URL || 'ws://localhost:3000/ws');
+    // NEXT_PUBLIC_WS_URLが未設定の場合は、今アクセスしているホスト名にそのまま追従する
+    // (typing.internal でもIPアドレスでも、envを書き換えずに接続できる)
+    const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+    const ws = new WebSocket(process.env.NEXT_PUBLIC_WS_URL || `${wsProtocol}//${window.location.host}/ws`);
     setSocket(ws);
 
 
