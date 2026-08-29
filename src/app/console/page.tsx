@@ -330,30 +330,64 @@ function MatchView({ gameState, players }: { gameState: GameState | null; player
     );
 }
 
-// ログを時刻付きで並べる。新しい行が来たら自動で一番下までスクロールする
-function LogView({ logs, emptyText }: { logs: LogEntry[]; emptyText: string }) {
-    const bottomRef = useRef<HTMLDivElement | null>(null);
-    const shouldAutoScrollRef = useRef(true);
+// 常に一番下（最新のログ）が見えるように追従する。
+// 利用者が過去のログを読もうと上へスクロールしている間だけ追従を止め、
+// 一番下の近くまで戻したら再び追従を再開する。
+function useFollowBottom(logs: LogEntry[]) {
+    const anchorRef = useRef<HTMLDivElement | null>(null);
+    // 自分で一番下へ動かしたときの位置。ここから動いていれば利用者が操作したと分かる
+    const lastScrolledTopRef = useRef(-1);
+
+    // 実際にスクロールする箱(.panel-body)を、目印の要素から辿って取得する
+    const getContainer = () => (anchorRef.current?.closest('.panel-body') as HTMLElement | null) ?? null;
+
+    // 利用者が過去のログを読もうと自分で上へスクロールしているかどうか。
+    // スクロールイベントに頼らず位置の比較で判断するので、確実に動く。
+    const isUserScrolledAway = (container: HTMLElement) => {
+        const movedByUser =
+            lastScrolledTopRef.current >= 0 && Math.abs(container.scrollTop - lastScrolledTopRef.current) > 8;
+        const distanceToBottom = container.scrollHeight - container.scrollTop - container.clientHeight;
+        // 一番下の近くまで戻したら、また追従を再開する
+        return movedByUser && distanceToBottom > 80;
+    };
+
+    const followBottom = () => {
+        const container = getContainer();
+        // 最大化で隠れている間(高さ0)に動かすと位置がずれるので何もしない
+        if (!container || container.clientHeight === 0) return;
+        if (isUserScrolledAway(container)) return;
+
+        container.scrollTop = container.scrollHeight;
+        lastScrolledTopRef.current = container.scrollTop; // 実際に落ち着いた位置を覚えておく
+    };
 
     useEffect(() => {
-        const container = bottomRef.current?.parentElement?.parentElement; // .panel-body
+        const container = getContainer();
         if (!container) return;
 
-        // 利用者が過去のログを読んでいる（上へスクロールしている）ときは追従しない
-        const handleScroll = () => {
-            const distanceToBottom = container.scrollHeight - container.scrollTop - container.clientHeight;
-            shouldAutoScrollRef.current = distanceToBottom < 40;
-        };
+        // 最大化/元に戻すで表示サイズが変わったときも、一番下に合わせ直す
+        const observer = new ResizeObserver(() => followBottom());
+        observer.observe(container);
 
-        container.addEventListener('scroll', handleScroll);
-        return () => container.removeEventListener('scroll', handleScroll);
+        followBottom();
+
+        return () => observer.disconnect();
     }, []);
 
+    // ログが増えるたびに一番下へ移動する
     useEffect(() => {
-        if (!shouldAutoScrollRef.current) return;
-        const container = bottomRef.current?.parentElement?.parentElement;
-        if (container) container.scrollTop = container.scrollHeight;
+        followBottom();
+        // 長い行の折り返しなどで高さが後から確定する場合に備えて、描画後にもう一度合わせる
+        const frameId = requestAnimationFrame(followBottom);
+        return () => cancelAnimationFrame(frameId);
     }, [logs]);
+
+    return anchorRef;
+}
+
+// ログを時刻付きで並べる。新しい行が来たら自動で一番下までスクロールする
+function LogView({ logs, emptyText }: { logs: LogEntry[]; emptyText: string }) {
+    const anchorRef = useFollowBottom(logs);
 
     return (
         <div>
@@ -364,7 +398,8 @@ function LogView({ logs, emptyText }: { logs: LogEntry[]; emptyText: string }) {
                     <span className="log-text">{log.text}</span>
                 </div>
             ))}
-            <div ref={bottomRef}></div>
+            {/* 一番下の位置を知るための目印 */}
+            <div ref={anchorRef}></div>
         </div>
     );
 }
