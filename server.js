@@ -3,7 +3,7 @@ const { createServer } = require('http');
 const { parse } = require('url');
 const next = require('next');
 const { WebSocketServer } = require('ws');
-const { SerialPort } = require('serialport');
+const { SerialPort, ReadlineParser } = require('serialport');
 const fs = require('fs');
 const { a } = require('framer-motion/client');
 const { diff } = require('util');
@@ -20,11 +20,22 @@ const PICO_SERIAL_PORT = process.env.PICO_SERIAL_PORT || '';
 const PICO_SERIAL_BAUD = Number(process.env.PICO_SERIAL_BAUD) || 115200;
 const PICO_RECONNECT_INTERVAL_MS = 5000;
 
+// .envで DEBUG=true を指定すると、Picoとのシリアル通信の中身を全てコンソールに表示する（テスト用）
+const DEBUG = String(process.env.DEBUG || '').toLowerCase() === 'true';
+
+function debugLog(...args) {
+    if (DEBUG) console.log(...args);
+}
+
 let picoSerial = null;
 
 function sendToPico(message) {
     if (picoSerial && picoSerial.isOpen) {
-        picoSerial.write(JSON.stringify(message) + '\n');
+        const line = JSON.stringify(message);
+        picoSerial.write(line + '\n');
+        debugLog(`[Pico送信] ${line}`);
+    } else {
+        debugLog('[Pico送信] シリアル未接続のため送信できません:', JSON.stringify(message));
     }
 }
 
@@ -49,6 +60,14 @@ async function connectPicoSerial() {
         if (err) {
             console.log(`Picoシリアルポート(${path})のオープンに失敗しました: ${err.message}`);
         }
+    });
+
+    // Pico側の print() 出力(USBシリアルのログ)を1行ずつ受け取る。
+    // DEBUG=true のときだけ表示するが、パーサ自体は常に接続してバッファが溜まらないようにする。
+    const parser = port.pipe(new ReadlineParser({ delimiter: '\n' }));
+    parser.on('data', (line) => {
+        const text = line.replace(/\r$/, '').trim();
+        if (text) debugLog(`[Picoログ] ${text}`);
     });
 
     port.on('open', () => {
