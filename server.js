@@ -4,6 +4,7 @@ const next = require('next');
 const { WebSocketServer } = require('ws');
 const { SerialPort, ReadlineParser } = require('serialport');
 const fs = require('fs');
+const util = require('util');
 const { a } = require('framer-motion/client');
 const { diff } = require('util');
 
@@ -26,7 +27,81 @@ function debugLog(...args) {
     if (DEBUG) console.log(...args);
 }
 
+// ===== 中央コンソール(/console)用のログ管理 =====
+// サーバのログとRaspberry Pi Picoからのログを直近分だけリングバッファに保持し、
+// 接続中のコンソール画面へリアルタイムに配信する。
+const MAX_LOG_ENTRIES = 300;
+const serverLogs = [];
+const picoLogs = [];
+const consoleClients = new Set(); // コンソール画面(観戦専用)のWebSocket
+let logSeq = 0;
+let isBroadcastingLog = false;
+
+// console.log等を差し替えるため、元の関数を退避しておく
+// (差し替え後の関数から実際のターミナル出力に使う)
+const rawConsole = {
+    log: console.log.bind(console),
+    info: console.info.bind(console),
+    warn: console.warn.bind(console),
+    error: console.error.bind(console),
+};
+
+function broadcastToConsoles(message) {
+    if (consoleClients.size === 0) return;
+    const text = JSON.stringify(message);
+    for (const client of consoleClients) {
+        if (client.readyState === 1) {
+            // 送信失敗をログに出すと再帰する可能性があるため、ここでは握りつぶす
+            try { client.send(text); } catch (e) { /* 無視 */ }
+        }
+    }
+}
+
+function pushLog(source, level, text) {
+    const buffer = source === 'pico' ? picoLogs : serverLogs;
+    const entry = { id: ++logSeq, time: Date.now(), level, text };
+    buffer.push(entry);
+    if (buffer.length > MAX_LOG_ENTRIES) buffer.shift();
+
+    // 配信処理の途中で更にログが出ても無限ループしないようにガードする
+    if (isBroadcastingLog) return;
+    isBroadcastingLog = true;
+    try {
+        broadcastToConsoles({ type: 'log', source, entry });
+    } finally {
+        isBroadcastingLog = false;
+    }
+}
+
+// サーバ側のconsole出力を、ターミナルとコンソール画面の両方へ流す
+for (const level of ['log', 'info', 'warn', 'error']) {
+    console[level] = (...args) => {
+        rawConsole[level](...args);
+        pushLog('server', level, util.format(...args));
+    };
+}
+
+// Picoからのログは DEBUG の設定に関わらず常に表示・配信する
+function picoLog(text) {
+    rawConsole.log(`[Picoログ] ${text}`);
+    pushLog('pico', 'log', text);
+}
+
+// 接続状態などPicoに関するお知らせは、サーバログとPicoログの両方に残す
+function picoNotice(text) {
+    console.log(text);
+    pushLog('pico', 'info', text);
+}
+
 let picoSerial = null;
+
+function isPicoConnected() {
+    return !!(picoSerial && picoSerial.isOpen);
+}
+
+function notifyPicoStatus() {
+    broadcastToConsoles({ type: 'picoStatus', connected: isPicoConnected() });
+}
 
 function sendToPico(message) {
     if (picoSerial && picoSerial.isOpen) {
@@ -55,7 +130,7 @@ async function connectPicoSerial() {
 
     const path = await findPicoPortPath();
     if (!path) {
-        console.log('Raspberry Pi Picoのシリアルポートが見つかりません。接続を待機します...');
+        picoNotice('Raspberry Pi Picoのシリアルポートが見つかりません。接続を待機します...');
         return;
     }
 
@@ -66,26 +141,29 @@ async function connectPicoSerial() {
     });
 
     // Pico側の print() 出力(USBシリアルのログ)を1行ずつ受け取る。
-    // DEBUG=true のときだけ表示するが、パーサ自体は常に接続してバッファが溜まらないようにする。
+    // 中央コンソールで常に確認できるよう、DEBUGの設定に関わらず全て出力する。
     const parser = port.pipe(new ReadlineParser({ delimiter: '\n' }));
     parser.on('data', (line) => {
         const text = line.replace(/\r$/, '').trim();
-        if (text) debugLog(`[Picoログ] ${text}`);
+        if (text) picoLog(text);
     });
 
     port.on('open', () => {
-        console.log(`Raspberry Pi Picoにシリアル接続しました (${path})`);
         picoSerial = port;
+        picoNotice(`Raspberry Pi Picoにシリアル接続しました (${path})`);
+        notifyPicoStatus();
     });
 
     port.on('close', () => {
-        console.log('Picoとのシリアル接続が切断されました。');
         picoSerial = null;
+        picoNotice('Picoとのシリアル接続が切断されました。');
+        notifyPicoStatus();
     });
 
     port.on('error', (err) => {
-        console.log(`Picoシリアル通信エラー: ${err.message}`);
         picoSerial = null;
+        picoNotice(`Picoシリアル通信エラー: ${err.message}`);
+        notifyPicoStatus();
     });
 }
 
@@ -170,9 +248,12 @@ app.prepare().then(() => {
     const wss = new WebSocketServer({ noServer: true });
 
     server.on('upgrade', (req, socket, head) => {
-        const { pathname } = parseRequestUrl(req);
+        const { pathname, query } = parseRequestUrl(req);
         if (pathname === '/ws') {
             wss.handleUpgrade(req, socket, head, (ws) => {
+                // /ws?role=console で接続してきたものは中央コンソール(観戦専用)として扱い、
+                // プレイヤー枠を消費しないようにする
+                ws.isConsole = query.role === 'console';
                 wss.emit('connection', ws, req);
             });
         } else {
@@ -188,6 +269,12 @@ app.prepare().then(() => {
         };
         const messageString = JSON.stringify(message);
         for (const client of clients) {
+            if (client.readyState === 1) {
+                client.send(messageString);
+            }
+        }
+        // 中央コンソールにも同じ状態を配信する
+        for (const client of consoleClients) {
             if (client.readyState === 1) {
                 client.send(messageString);
             }
@@ -230,6 +317,38 @@ app.prepare().then(() => {
 
     //新しいプレイヤーが接続してきた時の処理
     wss.on('connection', (ws) => {
+        // 中央コンソール(観戦専用)はプレイヤーとして登録せず、
+        // 現在の状態と貯めておいたログを渡してから配信対象に加える
+        if (ws.isConsole) {
+            consoleClients.add(ws);
+            ws.send(JSON.stringify({
+                type: 'consoleInit',
+                state: gameState,
+                serverLogs: serverLogs,
+                picoLogs: picoLogs,
+                picoConnected: isPicoConnected()
+            }));
+            console.log('中央コンソールが接続しました。');
+
+            ws.on('message', (message) => {
+                try {
+                    const received = JSON.parse(message.toString('utf8'));
+                    // 接続維持用のping以外は受け付けない（コンソールからゲームは操作できない）
+                    if (received.type === 'ping') {
+                        ws.send(JSON.stringify({ type: 'ping' }));
+                    }
+                } catch (e) {
+                    console.log(`コンソールからの不正なメッセージを無視しました: ${e.message}`);
+                }
+            });
+
+            ws.on('close', () => {
+                consoleClients.delete(ws);
+                console.log('中央コンソールが切断しました。');
+            });
+            return;
+        }
+
         // このゲームは2人プレイ専用のため、既に2人埋まっている場合は
         // 満員である旨を伝えて接続を切る(中途半端な「何も反映されない」状態を防ぐ)
         if (Object.keys(gameState.players).length >= 2) {
@@ -262,7 +381,8 @@ app.prepare().then(() => {
             typedText: "",
             interferenceType: "null",
             isBot: false,
-            seat : null
+            seat : null,
+            consecutiveCount: 0 // 連続で正解できている文字数（中央コンソールでの表示用）
         };
         console.log(`${playerId} が接続しました。`);
 
@@ -348,6 +468,8 @@ app.prepare().then(() => {
                 case "updateProgress"://ゲーム中のどこまで打ったか定期で更新
 
                     player.typedText = receivedMessage.typedText;
+                    // 中央コンソールで2人の連続正解数を表示できるように保持しておく
+                    player.consecutiveCount = receivedMessage.consecutiveCount || 0;
 
                     sendToPico({
                         type: "progressUpdate",//定期でプレイヤーのライトをどこまで点灯させるか送信
@@ -422,6 +544,7 @@ app.prepare().then(() => {
                         player.isReady = false;
                         player.typedText = "";
                         player.isBot = false;
+                        player.consecutiveCount = 0;
                     }
                     gameState.startTime = 0,
                         gameState.finishTime = 0,
@@ -495,6 +618,7 @@ app.prepare().then(() => {
                         p.score = 0;
                         p.typedText = '';
                         p.interferenceType = 'null';
+                        p.consecutiveCount = 0;
                     }
 
                     sendToPico({ type: 'gameClear' });
